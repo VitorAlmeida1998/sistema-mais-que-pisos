@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { instaladoresApi } from '@/services/api'
-import { formatCPF } from '@/lib/utils'
+import { formatCPF, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import type { Instalador } from '@/types'
 
@@ -30,7 +30,7 @@ function InstaladorModal({
   instalador?: Instalador
   onClose: () => void
 }) {
-  const qc = useQueryClient()
+  const queryClient = useQueryClient()
   const { register, handleSubmit, formState: { errors, isSubmitting }, watch } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: instalador
@@ -57,22 +57,22 @@ function InstaladorModal({
         ? instaladoresApi.update(instalador.id, data)
         : instaladoresApi.create(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['instaladores'] })
-      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['instaladores'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       onClose()
     },
   })
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
+        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{instalador ? 'Editar Instalador' : 'Novo Instalador'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl leading-none">&times;</button>
         </div>
         <form
           onSubmit={handleSubmit((data) => mutation.mutate(data))}
-          className="p-6 grid grid-cols-2 gap-4"
+          className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
           <div className="col-span-2">
             <label className="label">Nome *</label>
@@ -120,8 +120,8 @@ function InstaladorModal({
           </div>
 
           {mutation.isError && (
-            <div className="col-span-2 text-sm text-red-600 bg-red-50 p-3 rounded">
-              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao salvar'}
+            <div className="col-span-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded">
+              {getApiError(mutation.error)}
             </div>
           )}
 
@@ -150,12 +150,12 @@ export default function Instaladores() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Instaladores</h1>
           <p className="text-sm text-gray-500">{data.length} registro(s)</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
             <input
               type="checkbox"
@@ -174,31 +174,32 @@ export default function Instaladores() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="table-header">
               <th className="px-4 py-3 text-left">Nome</th>
               <th className="px-4 py-3 text-left">CPF</th>
-              <th className="px-4 py-3 text-left">Telefone</th>
-              <th className="px-4 py-3 text-left">Chave PIX</th>
-              <th className="px-4 py-3 text-left">MEI</th>
+              <th className="px-4 py-3 text-left hidden sm:table-cell">Telefone</th>
+              <th className="px-4 py-3 text-left hidden md:table-cell">Chave PIX</th>
+              <th className="px-4 py-3 text-left hidden sm:table-cell">MEI</th>
               <th className="px-4 py-3 text-left">Status</th>
               {canWrite && <th className="px-4 py-3 text-left">Ações</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
               <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
             ) : data.length === 0 ? (
               <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum instalador encontrado</td></tr>
             ) : (
               data.map((inst) => (
-                <tr key={inst.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{inst.nome}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatCPF(inst.cpf)}</td>
-                  <td className="px-4 py-3 text-gray-600">{inst.telefone ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{inst.chave_pix ?? '—'}</td>
-                  <td className="px-4 py-3">{inst.eh_mei ? 'Sim' : 'Não'}</td>
+                <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{inst.nome}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatCPF(inst.cpf)}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{inst.telefone ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">{inst.chave_pix ?? '—'}</td>
+                  <td className="px-4 py-3 dark:text-gray-300 hidden sm:table-cell">{inst.eh_mei ? 'Sim' : 'Não'}</td>
                   <td className="px-4 py-3">
                     <span className={inst.ativo ? 'badge-ativo' : 'badge-inativo'}>
                       {inst.ativo ? 'Ativo' : 'Inativo'}
@@ -219,6 +220,7 @@ export default function Instaladores() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showModal && (

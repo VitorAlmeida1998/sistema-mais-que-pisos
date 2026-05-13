@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { pagamentosApi, instaladoresApi } from '@/services/api'
-import { formatCurrency, formatDate, UNIDADE_LABELS } from '@/lib/utils'
+import { formatCurrency, formatDate, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import type { PagamentoPreview } from '@/types'
 
@@ -46,16 +46,16 @@ export default function FechamentoSemanal() {
       <h1 className="text-2xl font-bold mb-6">Fechamento Semanal</h1>
 
       {sucesso && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-between">
-          <p className="text-green-800 font-medium">Pagamento efetivado com sucesso! O PDF foi gerado.</p>
-          <button onClick={() => setSucesso(false)} className="text-green-600 hover:text-green-800 text-xl">&times;</button>
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6 flex items-center justify-between">
+          <p className="text-green-800 dark:text-green-300 font-medium">Pagamento efetivado com sucesso! O PDF foi gerado.</p>
+          <button onClick={() => setSucesso(false)} className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 text-xl">&times;</button>
         </div>
       )}
 
       {/* Formulário de busca */}
       <div className="card p-6 mb-6">
         <h2 className="text-base font-semibold mb-4">Parâmetros</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="label">Instalador *</label>
             <select value={instaladorId} onChange={(e) => setInstaladorId(e.target.value)} className="input">
@@ -83,7 +83,7 @@ export default function FechamentoSemanal() {
         </div>
         {previewMutation.isError && (
           <p className="text-sm text-red-600 mt-2">
-            {(previewMutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao calcular'}
+            {getApiError(previewMutation.error, 'Erro ao calcular')}
           </p>
         )}
       </div>
@@ -97,17 +97,18 @@ export default function FechamentoSemanal() {
             </h2>
 
             {/* Atividades */}
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Atividades Aprovadas ({preview.atividades.length})</h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Atividades Aprovadas ({preview.atividades.length})</h3>
             {preview.atividades.length === 0 ? (
               <p className="text-sm text-gray-400 mb-4">Nenhuma atividade aprovada no período.</p>
             ) : (
-              <table className="w-full text-sm mb-4">
+              <div className="overflow-x-auto mb-4">
+              <table className="w-full text-sm min-w-[420px]">
                 <thead>
                   <tr className="table-header">
                     <th className="px-3 py-2 text-left">Data</th>
-                    <th className="px-3 py-2 text-left">Obra</th>
-                    <th className="px-3 py-2 text-left">Serviço</th>
-                    <th className="px-3 py-2 text-right">Qtd</th>
+                    <th className="px-3 py-2 text-left hidden sm:table-cell">Obra</th>
+                    <th className="px-3 py-2 text-left hidden sm:table-cell">Serviço</th>
+                    <th className="px-3 py-2 text-right hidden sm:table-cell">Qtd</th>
                     <th className="px-3 py-2 text-right">Valor</th>
                   </tr>
                 </thead>
@@ -115,25 +116,27 @@ export default function FechamentoSemanal() {
                   {preview.atividades.map((a) => (
                     <tr key={a.id}>
                       <td className="px-3 py-2">{formatDate(a.data_execucao)}</td>
-                      <td className="px-3 py-2">{a.obra_cliente}</td>
-                      <td className="px-3 py-2">{a.servico_descricao}</td>
-                      <td className="px-3 py-2 text-right">{a.quantidade} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}</td>
+                      <td className="px-3 py-2 hidden sm:table-cell">{a.obra_cliente}</td>
+                      <td className="px-3 py-2 hidden sm:table-cell">{a.servico_descricao}</td>
+                      <td className="px-3 py-2 text-right hidden sm:table-cell">{a.quantidade} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}</td>
                       <td className="px-3 py-2 text-right font-medium">{formatCurrency(a.valor_calculado)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             {/* Adiantamentos */}
             {preview.adiantamentos_pendentes.length > 0 && (
               <>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Adiantamentos a Descontar ({preview.adiantamentos_pendentes.length})</h3>
-                <table className="w-full text-sm mb-4">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Adiantamentos a Descontar ({preview.adiantamentos_pendentes.length})</h3>
+                <div className="overflow-x-auto mb-4">
+                <table className="w-full text-sm min-w-[320px]">
                   <thead>
                     <tr className="table-header">
                       <th className="px-3 py-2 text-left">Data</th>
-                      <th className="px-3 py-2 text-left">Descrição</th>
+                      <th className="px-3 py-2 text-left hidden sm:table-cell">Descrição</th>
                       <th className="px-3 py-2 text-right">Valor</th>
                     </tr>
                   </thead>
@@ -141,27 +144,28 @@ export default function FechamentoSemanal() {
                     {preview.adiantamentos_pendentes.map((adt) => (
                       <tr key={adt.id}>
                         <td className="px-3 py-2">{formatDate(adt.data)}</td>
-                        <td className="px-3 py-2">{adt.descricao ?? '—'}</td>
+                        <td className="px-3 py-2 hidden sm:table-cell">{adt.descricao ?? '—'}</td>
                         <td className="px-3 py-2 text-right font-medium text-warning">{formatCurrency(adt.valor)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+                </div>
               </>
             )}
 
             {/* Totais */}
-            <div className="border-t pt-4 space-y-1 text-sm">
+            <div className="border-t dark:border-gray-700 pt-4 space-y-1 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Valor Bruto:</span>
-                <span className="font-medium">{formatCurrency(preview.valor_bruto)}</span>
+                <span className="text-gray-600 dark:text-gray-400">Valor Bruto:</span>
+                <span className="font-medium dark:text-gray-200">{formatCurrency(preview.valor_bruto)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">(-) Adiantamentos:</span>
+                <span className="text-gray-600 dark:text-gray-400">(-) Adiantamentos:</span>
                 <span className="font-medium text-warning">{formatCurrency(preview.valor_adiantamentos)}</span>
               </div>
-              <div className="flex justify-between text-base font-bold border-t pt-2 mt-2">
-                <span>Valor Líquido:</span>
+              <div className="flex justify-between text-base font-bold border-t dark:border-gray-700 pt-2 mt-2">
+                <span className="dark:text-gray-100">Valor Líquido:</span>
                 <span className="text-success">{formatCurrency(preview.valor_liquido)}</span>
               </div>
             </div>
@@ -181,7 +185,7 @@ export default function FechamentoSemanal() {
           )}
           {efetivarMutation.isError && (
             <p className="text-sm text-red-600">
-              {(efetivarMutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao efetivar'}
+              {getApiError(efetivarMutation.error, 'Erro ao efetivar')}
             </p>
           )}
         </div>

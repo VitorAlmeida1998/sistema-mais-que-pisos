@@ -1,7 +1,7 @@
 import api from '@/lib/axios'
 import type {
   Instalador, Obra, Servico, Atividade, Adiantamento, Pagamento,
-  PagamentoPreview, DashboardData, Usuario, AuditLog
+  PagamentoPreview, DashboardData, DashboardMensalItem, Usuario, AuditLog
 } from '@/types'
 
 // Auth
@@ -14,6 +14,7 @@ export const authApi = {
 // Dashboard
 export const dashboardApi = {
   get: () => api.get<DashboardData>('/dashboard'),
+  mensal: (meses = 6) => api.get<DashboardMensalItem[]>('/dashboard/mensal', { params: { meses } }),
 }
 
 // Instaladores

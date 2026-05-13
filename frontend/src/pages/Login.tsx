@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { authApi } from '@/services/api'
 import { useAuthStore } from '@/store/auth'
+import { getApiError } from '@/lib/utils'
 
 const schema = z.object({
   email: z.string().email('E-mail inválido'),
@@ -30,13 +31,12 @@ export default function Login() {
       setUser(me.data)
       navigate('/')
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setError(msg ?? 'Erro ao fazer login')
+      setError(getApiError(err, 'Erro ao fazer login'))
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-sm">
         <div className="card p-8">
           {/* Logo */}
@@ -50,7 +50,7 @@ export default function Login() {
             </div>
           </div>
 
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Entrar no sistema</h2>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Entrar no sistema</h2>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
@@ -78,7 +78,7 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-md px-3 py-2 text-sm text-red-700">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 text-sm text-red-700 dark:text-red-400">
                 {error}
               </div>
             )}

@@ -114,6 +114,14 @@ export interface DashboardData {
   valor_previsto_pagamento: string
 }
 
+export interface DashboardMensalItem {
+  mes: string
+  label: string
+  valor_pago: string
+  valor_adiantamentos: string
+  qtd_pagamentos: number
+}
+
 export interface AuditLog {
   id: number
   usuario_id: number | null

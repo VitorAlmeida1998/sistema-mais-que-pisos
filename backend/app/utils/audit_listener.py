@@ -1,70 +1,66 @@
-"""
-SQLAlchemy event listeners para auditoria automática de entidades financeiras.
-"""
 from __future__ import annotations
 
-from datetime import datetime
+from contextvars import ContextVar
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import event
-from sqlalchemy.orm import Session
 
 ENTIDADES_AUDITADAS = {"atividades", "adiantamentos", "pagamentos"}
 
-_audit_context: dict[str, Any] = {}
+_audit_user: ContextVar[int | None] = ContextVar("audit_user", default=None)
 
 
 def set_audit_user(usuario_id: int | None) -> None:
-    _audit_context["usuario_id"] = usuario_id
+    _audit_user.set(usuario_id)
 
 
 def get_audit_user() -> int | None:
-    return _audit_context.get("usuario_id")
+    return _audit_user.get()
 
 
 def _serializar(obj: Any) -> Any:
     if obj is None or isinstance(obj, (bool, int, float, str)):
         return obj
+    if isinstance(obj, Decimal):
+        return float(obj)
     if isinstance(obj, datetime):
         return obj.isoformat()
-    try:
-        from decimal import Decimal
-        if isinstance(obj, Decimal):
-            return float(obj)
-    except ImportError:
-        pass
-    try:
-        from datetime import date
-        if isinstance(obj, date):
-            return obj.isoformat()
-    except ImportError:
-        pass
+    if isinstance(obj, date):
+        return obj.isoformat()
     return str(obj)
 
 
 def _get_dados(instance: Any) -> dict[str, Any]:
-    dados: dict[str, Any] = {}
-    mapper = instance.__class__.__mapper__
-    for col in mapper.columns:
-        val = getattr(instance, col.key, None)
-        dados[col.key] = _serializar(val)
-    return dados
+    return {
+        col.key: _serializar(getattr(instance, col.key, None))
+        for col in instance.__class__.__mapper__.columns
+    }
 
 
-def registrar_audit(connection: Any, acao: str, entidade: str, entidade_id: int | None,
-                    dados_antes: dict | None, dados_depois: dict | None) -> None:
+def registrar_audit(
+    connection: Any,
+    acao: str,
+    entidade: str,
+    entidade_id: int | None,
+    dados_antes: dict | None,
+    dados_depois: dict | None,
+) -> None:
     from app.models.audit_log import AuditLog
     from sqlalchemy import insert as sa_insert
-    stmt = sa_insert(AuditLog.__table__).values(
-        usuario_id=get_audit_user(),
-        acao=acao,
-        entidade=entidade,
-        entidade_id=entidade_id,
-        dados_antes=dados_antes,
-        dados_depois=dados_depois,
-        timestamp=datetime.utcnow(),
+
+    connection.execute(
+        sa_insert(AuditLog.__table__).values(
+            usuario_id=get_audit_user(),
+            acao=acao,
+            entidade=entidade,
+            entidade_id=entidade_id,
+            dados_antes=dados_antes,
+            dados_depois=dados_depois,
+            timestamp=datetime.utcnow(),
+        )
     )
-    connection.execute(stmt)
 
 
 _listeners_setup = False

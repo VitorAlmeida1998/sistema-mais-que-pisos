@@ -46,3 +46,9 @@ export const PAPEL_LABELS: Record<string, string> = {
   gestor: 'Gestor',
   visualizador: 'Visualizador',
 }
+
+export function getApiError(error: unknown, fallback = 'Erro ao salvar'): string {
+  return (
+    (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback
+  )
+}

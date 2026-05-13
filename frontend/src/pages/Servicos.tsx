@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { servicosApi } from '@/services/api'
-import { formatCurrency, UNIDADE_LABELS } from '@/lib/utils'
+import { formatCurrency, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import type { Servico } from '@/types'
 
@@ -18,7 +18,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 function ServicoModal({ servico, onClose }: { servico?: Servico; onClose: () => void }) {
-  const qc = useQueryClient()
+  const queryClient = useQueryClient()
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: servico
@@ -29,15 +29,15 @@ function ServicoModal({ servico, onClose }: { servico?: Servico; onClose: () => 
   const mutation = useMutation({
     mutationFn: (data: FormData) =>
       servico ? servicosApi.update(servico.id, data) : servicosApi.create(data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['servicos'] }); onClose() },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['servicos'] }); onClose() },
   })
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-md">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md">
+        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{servico ? 'Editar Serviço' : 'Novo Serviço'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
           <div>
@@ -69,7 +69,7 @@ function ServicoModal({ servico, onClose }: { servico?: Servico; onClose: () => 
           )}
           {mutation.isError && (
             <p className="text-sm text-red-600">
-              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao salvar'}
+              {getApiError(mutation.error)}
             </p>
           )}
           <div className="flex justify-end gap-3 pt-2">
@@ -98,7 +98,7 @@ export default function Servicos() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold">Serviços</h1>
         <button onClick={() => { setEditing(undefined); setShowModal(true) }} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Novo Serviço
@@ -106,25 +106,26 @@ export default function Servicos() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[400px]">
           <thead>
             <tr className="table-header">
               <th className="px-4 py-3 text-left">Descrição</th>
-              <th className="px-4 py-3 text-left">Unidade</th>
+              <th className="px-4 py-3 text-left hidden sm:table-cell">Unidade</th>
               <th className="px-4 py-3 text-right">Valor Unitário</th>
               <th className="px-4 py-3 text-left">Status</th>
               <th className="px-4 py-3 text-left">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
             ) : (
               data.map((s) => (
-                <tr key={s.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{s.descricao}</td>
-                  <td className="px-4 py-3 text-gray-600">{UNIDADE_LABELS[s.unidade]}</td>
-                  <td className="px-4 py-3 text-right font-medium">{formatCurrency(s.valor_unitario)}</td>
+                <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{s.descricao}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{UNIDADE_LABELS[s.unidade]}</td>
+                  <td className="px-4 py-3 text-right font-medium dark:text-gray-200">{formatCurrency(s.valor_unitario)}</td>
                   <td className="px-4 py-3">
                     <span className={s.ativo ? 'badge-ativo' : 'badge-inativo'}>{s.ativo ? 'Ativo' : 'Inativo'}</span>
                   </td>
@@ -138,6 +139,7 @@ export default function Servicos() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showModal && <ServicoModal servico={editing} onClose={() => { setShowModal(false); setEditing(undefined) }} />}

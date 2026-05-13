@@ -1,6 +1,9 @@
+import structlog
 from decimal import Decimal
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
+
+logger = structlog.get_logger()
 from app.models.atividade import StatusAtividade
 from app.models.pagamento import Pagamento
 from app.repositories.atividade import AtividadeRepository
@@ -101,8 +104,9 @@ class PagamentoService:
             pagamento.comprovante_pdf_path = pdf_path
             self.db.commit()
             self.db.refresh(pagamento)
-        except Exception:
-            pass  # PDF é opcional, não deve bloquear o pagamento
+        except Exception as exc:
+            # PDF é opcional — falha não bloqueia o pagamento
+            logger.warning("falha_ao_gerar_pdf", pagamento_id=pagamento.id, erro=str(exc))
 
         r = PagamentoResponse.model_validate(pagamento)
         r.instalador_nome = instalador.nome

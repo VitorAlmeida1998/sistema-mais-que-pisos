@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { obrasApi } from '@/services/api'
-import { formatDate, STATUS_OBRA_LABELS } from '@/lib/utils'
+import { formatDate, STATUS_OBRA_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import type { Obra } from '@/types'
 
@@ -20,7 +20,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>
 
 function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
-  const qc = useQueryClient()
+  const queryClient = useQueryClient()
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: obra
@@ -39,18 +39,18 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
     mutationFn: (data: FormData) =>
       obra ? obrasApi.update(obra.id, data) : obrasApi.create(data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['obras'] })
-      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['obras'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       onClose()
     },
   })
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-lg">
-        <div className="px-6 py-4 border-b flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg">
+        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{obra ? 'Editar Obra' : 'Nova Obra'}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
           <div>
@@ -87,7 +87,7 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
           </div>
           {mutation.isError && (
             <p className="text-sm text-red-600">
-              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao salvar'}
+              {getApiError(mutation.error)}
             </p>
           )}
           <div className="flex justify-end gap-3 pt-2">
@@ -121,12 +121,12 @@ export default function Obras() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Obras</h1>
           <p className="text-sm text-gray-500">{data.length} registro(s)</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
             <input type="checkbox" checked={apenasAtivas} onChange={(e) => setApenasAtivas(e.target.checked)} className="rounded" />
             Apenas ativas
@@ -140,29 +140,30 @@ export default function Obras() {
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[540px]">
           <thead>
             <tr className="table-header">
               <th className="px-4 py-3 text-left">Cliente</th>
-              <th className="px-4 py-3 text-left">Endereço</th>
+              <th className="px-4 py-3 text-left hidden md:table-cell">Endereço</th>
               <th className="px-4 py-3 text-left">Início</th>
-              <th className="px-4 py-3 text-left">Previsão</th>
+              <th className="px-4 py-3 text-left hidden sm:table-cell">Previsão</th>
               <th className="px-4 py-3 text-left">Status</th>
               {canWrite && <th className="px-4 py-3 text-left">Ações</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
             ) : data.length === 0 ? (
               <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhuma obra encontrada</td></tr>
             ) : (
               data.map((obra) => (
-                <tr key={obra.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{obra.cliente_nome}</td>
-                  <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{obra.endereco}</td>
-                  <td className="px-4 py-3 text-gray-600">{formatDate(obra.data_inicio)}</td>
-                  <td className="px-4 py-3 text-gray-600">{obra.data_fim_prevista ? formatDate(obra.data_fim_prevista) : '—'}</td>
+                <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{obra.cliente_nome}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs truncate hidden md:table-cell">{obra.endereco}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(obra.data_inicio)}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{obra.data_fim_prevista ? formatDate(obra.data_fim_prevista) : '—'}</td>
                   <td className="px-4 py-3">
                     <span className={statusBadge[obra.status] ?? 'badge-inativo'}>
                       {STATUS_OBRA_LABELS[obra.status]}
@@ -180,6 +181,7 @@ export default function Obras() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showModal && <ObraModal obra={editing} onClose={() => { setShowModal(false); setEditing(undefined) }} />}
