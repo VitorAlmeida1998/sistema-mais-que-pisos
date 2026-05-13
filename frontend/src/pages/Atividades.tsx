@@ -1,0 +1,211 @@
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, CheckCircle } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/services/api'
+import { formatCurrency, formatDate, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+import type { StatusAtividade } from '@/types'
+
+const schema = z.object({
+  instalador_id: z.coerce.number().min(1, 'Selecione um instalador'),
+  obra_id: z.coerce.number().min(1, 'Selecione uma obra'),
+  servico_id: z.coerce.number().min(1, 'Selecione um serviço'),
+  quantidade: z.coerce.number().positive('Quantidade deve ser positiva'),
+  data_execucao: z.string().min(1, 'Data obrigatória'),
+  observacao: z.string().optional(),
+})
+type FormData = z.infer<typeof schema>
+
+function AtividadeModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient()
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  })
+
+  const { data: instaladores = [] } = useQuery({
+    queryKey: ['instaladores', true],
+    queryFn: () => instaladoresApi.list({ apenas_ativos: true }).then((r) => r.data),
+  })
+  const { data: obras = [] } = useQuery({
+    queryKey: ['obras', true],
+    queryFn: () => obrasApi.list({ apenas_ativas: true }).then((r) => r.data),
+  })
+  const { data: servicos = [] } = useQuery({
+    queryKey: ['servicos'],
+    queryFn: () => servicosApi.list({ apenas_ativos: true }).then((r) => r.data),
+  })
+
+  const mutation = useMutation({
+    mutationFn: (data: FormData) => atividadesApi.create(data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['atividades'] }); qc.invalidateQueries({ queryKey: ['dashboard'] }); onClose() },
+  })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg w-full max-w-lg">
+        <div className="px-6 py-4 border-b flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Nova Atividade</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
+          <div>
+            <label className="label">Instalador *</label>
+            <select {...register('instalador_id')} className="input">
+              <option value="">Selecione...</option>
+              {instaladores.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
+            </select>
+            {errors.instalador_id && <p className="text-xs text-red-600 mt-1">{errors.instalador_id.message}</p>}
+          </div>
+          <div>
+            <label className="label">Obra *</label>
+            <select {...register('obra_id')} className="input">
+              <option value="">Selecione...</option>
+              {obras.map((o) => <option key={o.id} value={o.id}>{o.cliente_nome}</option>)}
+            </select>
+            {errors.obra_id && <p className="text-xs text-red-600 mt-1">{errors.obra_id.message}</p>}
+          </div>
+          <div>
+            <label className="label">Serviço *</label>
+            <select {...register('servico_id')} className="input">
+              <option value="">Selecione...</option>
+              {servicos.map((s) => (
+                <option key={s.id} value={s.id}>{s.descricao} — {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}</option>
+              ))}
+            </select>
+            {errors.servico_id && <p className="text-xs text-red-600 mt-1">{errors.servico_id.message}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Quantidade *</label>
+              <input {...register('quantidade')} type="number" step="0.001" className="input" />
+              {errors.quantidade && <p className="text-xs text-red-600 mt-1">{errors.quantidade.message}</p>}
+            </div>
+            <div>
+              <label className="label">Data de Execução *</label>
+              <input {...register('data_execucao')} type="date" className="input" />
+              {errors.data_execucao && <p className="text-xs text-red-600 mt-1">{errors.data_execucao.message}</p>}
+            </div>
+          </div>
+          <div>
+            <label className="label">Observação</label>
+            <textarea {...register('observacao')} className="input h-16 resize-none" />
+          </div>
+          {mutation.isError && (
+            <p className="text-sm text-red-600">
+              {(mutation.error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro ao salvar'}
+            </p>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={mutation.isPending} className="btn-primary">
+              {mutation.isPending ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+const statusBadge: Record<StatusAtividade, string> = {
+  pendente: 'badge-pendente',
+  aprovada: 'badge-aprovada',
+  paga: 'badge-paga',
+}
+
+export default function Atividades() {
+  const { canWrite } = useAuth()
+  const qc = useQueryClient()
+  const [showModal, setShowModal] = useState(false)
+  const [filterStatus, setFilterStatus] = useState<string>('')
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['atividades', filterStatus],
+    queryFn: () => atividadesApi.list(filterStatus ? { status: filterStatus } : undefined).then((r) => r.data),
+  })
+
+  const aprovarMutation = useMutation({
+    mutationFn: (id: number) => atividadesApi.aprovar(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['atividades'] }); qc.invalidateQueries({ queryKey: ['dashboard'] }) },
+  })
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Atividades</h1>
+          <p className="text-sm text-gray-500">{data.length} registro(s)</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input w-auto">
+            <option value="">Todos os status</option>
+            <option value="pendente">Pendente</option>
+            <option value="aprovada">Aprovada</option>
+            <option value="paga">Paga</option>
+          </select>
+          {canWrite && (
+            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> Nova Atividade
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="table-header">
+              <th className="px-4 py-3 text-left">Instalador</th>
+              <th className="px-4 py-3 text-left">Obra</th>
+              <th className="px-4 py-3 text-left">Serviço</th>
+              <th className="px-4 py-3 text-right">Qtd</th>
+              <th className="px-4 py-3 text-right">Valor</th>
+              <th className="px-4 py-3 text-left">Data</th>
+              <th className="px-4 py-3 text-left">Status</th>
+              {canWrite && <th className="px-4 py-3 text-left">Ações</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {isLoading ? (
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+            ) : data.length === 0 ? (
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Nenhuma atividade encontrada</td></tr>
+            ) : (
+              data.map((a) => (
+                <tr key={a.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-medium text-gray-900">{a.instalador_nome ?? `#${a.instalador_id}`}</td>
+                  <td className="px-4 py-3 text-gray-600">{a.obra_cliente ?? `#${a.obra_id}`}</td>
+                  <td className="px-4 py-3 text-gray-600 max-w-[150px] truncate">{a.servico_descricao ?? `#${a.servico_id}`}</td>
+                  <td className="px-4 py-3 text-right">{a.quantidade} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}</td>
+                  <td className="px-4 py-3 text-right font-medium">{formatCurrency(a.valor_calculado)}</td>
+                  <td className="px-4 py-3 text-gray-600">{formatDate(a.data_execucao)}</td>
+                  <td className="px-4 py-3">
+                    <span className={statusBadge[a.status]}>{STATUS_ATIVIDADE_LABELS[a.status]}</span>
+                  </td>
+                  {canWrite && (
+                    <td className="px-4 py-3">
+                      {a.status === 'pendente' && (
+                        <button
+                          onClick={() => aprovarMutation.mutate(a.id)}
+                          disabled={aprovarMutation.isPending}
+                          className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 font-medium"
+                        >
+                          <CheckCircle size={14} /> Aprovar
+                        </button>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showModal && <AtividadeModal onClose={() => setShowModal(false)} />}
+    </div>
+  )
+}

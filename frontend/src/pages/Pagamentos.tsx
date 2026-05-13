@@ -1,0 +1,80 @@
+import { useQuery } from '@tanstack/react-query'
+import { Download } from 'lucide-react'
+import { pagamentosApi } from '@/services/api'
+import { formatCurrency, formatDate } from '@/lib/utils'
+
+export default function Pagamentos() {
+  const { data = [], isLoading } = useQuery({
+    queryKey: ['pagamentos'],
+    queryFn: () => pagamentosApi.list().then((r) => r.data),
+  })
+
+  const downloadRecibo = async (id: number) => {
+    try {
+      const res = await pagamentosApi.recibo(id)
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `recibo_pagamento_${id}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('PDF não disponível para este pagamento.')
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Histórico de Pagamentos</h1>
+          <p className="text-sm text-gray-500">{data.length} registro(s)</p>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="table-header">
+              <th className="px-4 py-3 text-left">#</th>
+              <th className="px-4 py-3 text-left">Instalador</th>
+              <th className="px-4 py-3 text-left">Período</th>
+              <th className="px-4 py-3 text-right">Bruto</th>
+              <th className="px-4 py-3 text-right">Adiantamentos</th>
+              <th className="px-4 py-3 text-right">Líquido</th>
+              <th className="px-4 py-3 text-left">Data Pag.</th>
+              <th className="px-4 py-3 text-left">Recibo</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {isLoading ? (
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+            ) : data.length === 0 ? (
+              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Nenhum pagamento encontrado</td></tr>
+            ) : (
+              data.map((p) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-gray-500">#{p.id}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{p.instalador_nome ?? `#${p.instalador_id}`}</td>
+                  <td className="px-4 py-3 text-gray-600">{formatDate(p.semana_inicio)} — {formatDate(p.semana_fim)}</td>
+                  <td className="px-4 py-3 text-right">{formatCurrency(p.valor_bruto)}</td>
+                  <td className="px-4 py-3 text-right text-warning">{formatCurrency(p.valor_adiantamentos)}</td>
+                  <td className="px-4 py-3 text-right font-bold text-success">{formatCurrency(p.valor_liquido)}</td>
+                  <td className="px-4 py-3 text-gray-600">{p.data_pagamento ? formatDate(p.data_pagamento) : '—'}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => downloadRecibo(p.id)}
+                      className="flex items-center gap-1 text-xs text-primary hover:text-primary-dark font-medium"
+                    >
+                      <Download size={14} /> PDF
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
