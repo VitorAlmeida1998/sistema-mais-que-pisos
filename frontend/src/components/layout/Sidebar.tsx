@@ -49,7 +49,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <aside className={cn(
       'fixed left-0 top-0 z-50 w-64 flex flex-col h-screen transition-transform duration-200 ease-in-out',
-      'bg-[#B91C1C] border-r border-black/10',
+      'bg-[#B91C1C] dark:bg-[#7F1D1D] border-r border-black/10',
       'lg:translate-x-0',
       isOpen ? 'translate-x-0' : '-translate-x-full'
     )}>
