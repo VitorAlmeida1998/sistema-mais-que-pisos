@@ -28,6 +28,15 @@ const navItems: NavItem[] = [
   { to: '/audit-log', icon: ScrollText, label: 'Audit Log', roles: ['admin'] },
 ]
 
+function UserAvatar({ nome }: { nome: string }) {
+  const initials = nome.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
+  return (
+    <div className="w-9 h-9 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 ring-1 ring-primary/30">
+      <span className="text-primary text-xs font-bold">{initials}</span>
+    </div>
+  )
+}
+
 interface SidebarProps {
   isOpen: boolean
   onClose: () => void
@@ -39,69 +48,80 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <aside className={cn(
-      'fixed left-0 top-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col h-screen transition-transform duration-200 ease-in-out',
+      'fixed left-0 top-0 z-50 w-64 flex flex-col h-screen transition-transform duration-200 ease-in-out',
+      'bg-[#0F172A] border-r border-white/[0.06]',
       'lg:translate-x-0',
       isOpen ? 'translate-x-0' : '-translate-x-full'
     )}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200 dark:border-gray-700">
-        <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.06]">
+        <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-primary flex-shrink-0">
           <span className="text-white font-bold text-xs">MQ</span>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm text-gray-900 dark:text-gray-100 leading-tight">Mais que Pisos</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Gestão de Pagamentos</p>
+          <p className="font-bold text-sm text-white leading-tight">Mais que Pisos</p>
+          <p className="text-[11px] text-slate-500">Gestão de Pagamentos</p>
         </div>
-        <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 lg:hidden">
-          <X size={18} />
+        <button
+          onClick={onClose}
+          className="p-1.5 text-slate-600 hover:text-slate-400 lg:hidden rounded-lg hover:bg-white/5 transition-colors"
+        >
+          <X size={16} />
         </button>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        <ul className="space-y-0.5">
-          {navItems
-            .filter((item) => hasRole(...item.roles))
-            .map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.to === '/'}
-                  onClick={onClose}
-                  className={({ isActive }) =>
-                    cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
-                      isActive
-                        ? 'bg-primary-light text-primary-dark dark:bg-primary/20 dark:text-red-300 font-medium'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100'
-                    )
-                  }
-                >
-                  <item.icon size={16} />
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
-        </ul>
+      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5 scrollbar-none">
+        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-3 mb-3">
+          Navegação
+        </p>
+        {navItems
+          .filter((item) => hasRole(...item.roles))
+          .map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              onClick={onClose}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-150',
+                  isActive
+                    ? 'bg-primary/15 text-primary font-semibold'
+                    : 'text-slate-400 hover:bg-white/[0.05] hover:text-slate-200'
+                )
+              }
+            >
+              <item.icon size={16} className="flex-shrink-0" />
+              {item.label}
+            </NavLink>
+          ))}
       </nav>
 
       {/* User */}
-      <div className="px-4 py-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.nome}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.papel}</p>
+      <div className="px-4 py-4 border-t border-white/[0.06]">
+        <div className="flex items-center gap-3">
+          {user && <UserAvatar nome={user.nome} />}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-slate-200 truncate">{user?.nome}</p>
+            <p className="text-[11px] text-slate-500 truncate capitalize">{user?.papel}</p>
           </div>
-          <button
-            onClick={toggle}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded"
-            title={isDark ? 'Modo claro' : 'Modo escuro'}
-          >
-            {isDark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button onClick={logout} className="p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 rounded">
-            <LogOut size={16} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={toggle}
+              className="p-1.5 text-slate-500 hover:text-slate-300 rounded-lg hover:bg-white/5 transition-colors"
+              title={isDark ? 'Modo claro' : 'Modo escuro'}
+            >
+              {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+            <button
+              onClick={logout}
+              className="p-1.5 text-slate-500 hover:text-red-400 rounded-lg hover:bg-white/5 transition-colors"
+              title="Sair"
+            >
+              <LogOut size={14} />
+            </button>
+          </div>
         </div>
       </div>
     </aside>
