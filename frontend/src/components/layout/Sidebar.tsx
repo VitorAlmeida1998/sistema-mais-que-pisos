@@ -54,14 +54,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       isOpen ? 'translate-x-0' : '-translate-x-full'
     )}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-black/10">
-        <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0 ring-1 ring-white/30">
-          <span className="text-white font-bold text-xs">MQ</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm text-white leading-tight">Mais que Pisos</p>
-          <p className="text-[11px] text-red-200/70">Gestão de Pagamentos</p>
-        </div>
+      <div className="flex items-center justify-between px-5 py-4 border-b border-black/10">
+        <img src="/logo.png" alt="Mais que Pisos" className="h-9 w-auto object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
         <button
           onClick={onClose}
           className="p-1.5 text-white/50 hover:text-white lg:hidden rounded-lg hover:bg-black/10 transition-colors"

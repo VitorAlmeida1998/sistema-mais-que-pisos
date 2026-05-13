@@ -26,12 +26,7 @@ export function Layout() {
           >
             <Menu size={18} />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shadow-primary">
-              <span className="text-white font-bold text-[10px]">MQ</span>
-            </div>
-            <span className="font-bold text-sm text-gray-900 dark:text-white">Mais que Pisos</span>
-          </div>
+          <img src="/logo.png" alt="Mais que Pisos" className="h-7 w-auto object-contain dark:brightness-0 dark:invert" />
         </header>
 
         <main className="flex-1 overflow-auto">
