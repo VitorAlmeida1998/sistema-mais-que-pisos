@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from app.database import get_db
+from app.models.instalador import Instalador
 from app.models.pagamento import Pagamento
 from app.models.usuario import Usuario
 from app.repositories.instalador import InstaladorRepository
@@ -27,6 +28,13 @@ class DashboardResponse(BaseModel):
     obras_em_andamento: int
     atividades_pendentes_aprovacao: int
     valor_previsto_pagamento: Decimal
+
+
+class RankingItem(BaseModel):
+    instalador_id: int
+    instalador_nome: str
+    total_liquido: Decimal
+    qtd_pagamentos: int
 
 
 class DashboardMensalItem(BaseModel):
@@ -93,3 +101,33 @@ def dashboard_mensal(
         ))
 
     return result
+
+
+@router.get("/ranking", response_model=list[RankingItem])
+def dashboard_ranking(
+    limite: int = Query(5, ge=1, le=20),
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list[RankingItem]:
+    rows = db.execute(
+        select(
+            Pagamento.instalador_id,
+            Instalador.nome,
+            func.sum(Pagamento.valor_liquido).label("total_liquido"),
+            func.count(Pagamento.id).label("qtd_pagamentos"),
+        )
+        .join(Instalador, Instalador.id == Pagamento.instalador_id)
+        .group_by(Pagamento.instalador_id, Instalador.nome)
+        .order_by(func.sum(Pagamento.valor_liquido).desc())
+        .limit(limite)
+    ).all()
+
+    return [
+        RankingItem(
+            instalador_id=row.instalador_id,
+            instalador_nome=row.nome,
+            total_liquido=Decimal(str(row.total_liquido or 0)),
+            qtd_pagamentos=int(row.qtd_pagamentos or 0),
+        )
+        for row in rows
+    ]

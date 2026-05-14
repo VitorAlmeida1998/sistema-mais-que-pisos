@@ -1,11 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, Building2, Wrench, ClipboardList,
-  Wallet, CreditCard, History, UserCog, ScrollText, LogOut, X, Sun, Moon
+  Wallet, CreditCard, History, UserCog, ScrollText, LogOut, X, Sun, Moon, BarChart2
 } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useThemeStore } from '@/store/theme'
 import { cn } from '@/lib/utils'
+import { dashboardApi } from '@/services/api'
 import type { Papel } from '@/types'
 
 interface NavItem {
@@ -24,6 +26,7 @@ const navItems: NavItem[] = [
   { to: '/adiantamentos', icon: Wallet, label: 'Adiantamentos', roles: ['admin', 'gestor', 'visualizador'] },
   { to: '/fechamento', icon: CreditCard, label: 'Fechamento Semanal', roles: ['admin', 'gestor'] },
   { to: '/pagamentos', icon: History, label: 'Pagamentos', roles: ['admin', 'gestor', 'visualizador'] },
+  { to: '/relatorios', icon: BarChart2, label: 'Relatórios', roles: ['admin', 'gestor', 'visualizador'] },
   { to: '/usuarios', icon: UserCog, label: 'Usuários', roles: ['admin'] },
   { to: '/audit-log', icon: ScrollText, label: 'Audit Log', roles: ['admin'] },
 ]
@@ -45,6 +48,13 @@ interface SidebarProps {
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout, hasRole } = useAuth()
   const { isDark, toggle } = useThemeStore()
+
+  const { data: dashboard } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: () => dashboardApi.get().then((r) => r.data),
+    refetchInterval: 60_000,
+  })
+  const pendentes = dashboard?.atividades_pendentes_aprovacao ?? 0
 
   return (
     <aside className={cn(
@@ -87,7 +97,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               }
             >
               <item.icon size={16} className="flex-shrink-0" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.to === '/atividades' && pendentes > 0 && (
+                <span className="ml-auto bg-amber-400 text-gray-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                  {pendentes}
+                </span>
+              )}
             </NavLink>
           ))}
       </nav>

@@ -12,6 +12,7 @@ import FechamentoSemanal from '@/pages/FechamentoSemanal'
 import Pagamentos from '@/pages/Pagamentos'
 import Usuarios from '@/pages/Usuarios'
 import AuditLogPage from '@/pages/AuditLog'
+import Relatorios from '@/pages/Relatorios'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => !!s.accessToken)
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="adiantamentos" element={<Adiantamentos />} />
           <Route path="fechamento" element={<FechamentoSemanal />} />
           <Route path="pagamentos" element={<Pagamentos />} />
+          <Route path="relatorios" element={<Relatorios />} />
           <Route path="usuarios" element={<Usuarios />} />
           <Route path="audit-log" element={<AuditLogPage />} />
         </Route>

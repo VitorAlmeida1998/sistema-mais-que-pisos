@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Users, Building2, ClipboardList, TrendingUp } from 'lucide-react'
+import { Users, Building2, ClipboardList, TrendingUp, Trophy } from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
@@ -88,6 +88,11 @@ export default function Dashboard() {
   const { data: mensal = [], isLoading: loadingMensal } = useQuery({
     queryKey: ['dashboard-mensal', meses],
     queryFn: () => dashboardApi.mensal(meses).then((r) => r.data),
+  })
+
+  const { data: ranking = [] } = useQuery({
+    queryKey: ['dashboard-ranking'],
+    queryFn: () => dashboardApi.ranking().then((r) => r.data),
   })
 
   const chartData = mensal.map((item) => ({
@@ -227,6 +232,42 @@ export default function Dashboard() {
           </ResponsiveContainer>
         )}
       </div>
+
+      {/* Ranking de instaladores */}
+      {ranking.length > 0 && (
+        <div className="card p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Trophy size={18} className="text-amber-500" />
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">Top Instaladores</h2>
+            <span className="text-xs text-gray-400 ml-1">por valor total recebido</span>
+          </div>
+          <div className="space-y-3">
+            {ranking.map((item, index) => {
+              const max = parseFloat(ranking[0].total_liquido)
+              const pct = max > 0 ? (parseFloat(item.total_liquido) / max) * 100 : 0
+              const medals = ['🥇', '🥈', '🥉']
+              return (
+                <div key={item.instalador_id} className="flex items-center gap-3">
+                  <span className="text-lg w-6 text-center">{medals[index] ?? `${index + 1}º`}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.instalador_nome}</span>
+                      <span className="text-sm font-bold text-emerald-600 ml-2 flex-shrink-0">{formatCurrency(item.total_liquido)}</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{item.qtd_pagamentos} fechamento(s)</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

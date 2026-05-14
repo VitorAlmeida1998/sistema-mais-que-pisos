@@ -1,7 +1,8 @@
 import api from '@/lib/axios'
 import type {
   Instalador, Obra, Servico, Atividade, Adiantamento, Pagamento,
-  PagamentoPreview, DashboardData, DashboardMensalItem, Usuario, AuditLog
+  PagamentoPreview, DashboardData, DashboardMensalItem, RankingItem,
+  RelatorioInstalador, Usuario, AuditLog
 } from '@/types'
 
 // Auth
@@ -15,6 +16,7 @@ export const authApi = {
 export const dashboardApi = {
   get: () => api.get<DashboardData>('/dashboard'),
   mensal: (meses = 6) => api.get<DashboardMensalItem[]>('/dashboard/mensal', { params: { meses } }),
+  ranking: (limite = 5) => api.get<RankingItem[]>('/dashboard/ranking', { params: { limite } }),
 }
 
 // Instaladores
@@ -77,6 +79,8 @@ export const pagamentosApi = {
 export const relatoriosApi = {
   semanal: (inicio: string, fim: string) =>
     api.get('/relatorios/semanal', { params: { inicio, fim } }),
+  instalador: (id: number, params?: { data_inicio?: string; data_fim?: string }) =>
+    api.get<RelatorioInstalador>(`/relatorios/instalador/${id}`, { params }),
 }
 
 // Usuários

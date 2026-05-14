@@ -135,6 +135,28 @@ export interface AuditLog {
   timestamp: string
 }
 
+export interface RankingItem {
+  instalador_id: number
+  instalador_nome: string
+  total_liquido: string
+  qtd_pagamentos: number
+}
+
+export interface RelatorioInstalador {
+  instalador_id: number
+  instalador_nome: string
+  instalador_cpf: string
+  chave_pix: string | null
+  periodo_inicio: string | null
+  periodo_fim: string | null
+  total_bruto: string
+  total_adiantamentos: string
+  total_liquido: string
+  total_atividades: number
+  atividades: Atividade[]
+  pagamentos: Pagamento[]
+}
+
 export interface ApiError {
   error: boolean
   message: string
