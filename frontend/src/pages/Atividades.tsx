@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, CheckCircle } from 'lucide-react'
-import { useForm } from 'react-hook-form'
+import { Plus, CheckCircle, Trash2 } from 'lucide-react'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/services/api'
@@ -9,21 +9,30 @@ import { formatCurrency, formatDate, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, ge
 import { useAuth } from '@/hooks/useAuth'
 import type { StatusAtividade } from '@/types'
 
+const linhaSchema = z.object({
+  servico_id: z.coerce.number().min(1, 'Selecione um serviço'),
+  quantidade: z.coerce.number().positive('Quantidade deve ser positiva'),
+})
+
 const schema = z.object({
   instalador_id: z.coerce.number().min(1, 'Selecione um instalador'),
   obra_id: z.coerce.number().min(1, 'Selecione uma obra'),
-  servico_id: z.coerce.number().min(1, 'Selecione um serviço'),
-  quantidade: z.coerce.number().positive('Quantidade deve ser positiva'),
   data_execucao: z.string().min(1, 'Data obrigatória'),
   observacao: z.string().optional(),
+  servicos: z.array(linhaSchema).min(1),
 })
 type FormData = z.infer<typeof schema>
 
 function AtividadeModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: { servicos: [{ servico_id: 0, quantidade: 0 }] },
   })
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'servicos' })
 
   const { data: instaladores = [] } = useQuery({
     queryKey: ['instaladores', true],
@@ -38,74 +47,142 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
     queryFn: () => servicosApi.list({ apenas_ativos: true }).then((r) => r.data),
   })
 
-  const mutation = useMutation({
-    mutationFn: (data: FormData) => atividadesApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atividades'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }); onClose() },
-  })
+  const onSubmit = async (data: FormData) => {
+    setSubmitError(null)
+    try {
+      await Promise.all(
+        data.servicos.map((linha) =>
+          atividadesApi.create({
+            instalador_id: data.instalador_id,
+            obra_id: data.obra_id,
+            data_execucao: data.data_execucao,
+            observacao: data.observacao,
+            servico_id: linha.servico_id,
+            quantidade: linha.quantidade,
+          })
+        )
+      )
+      queryClient.invalidateQueries({ queryKey: ['atividades'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      onClose()
+    } catch (err) {
+      setSubmitError(getApiError(err))
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg">
-        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
           <h2 className="text-lg font-semibold">Nova Atividade</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
         </div>
-        <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
-          <div>
-            <label className="label">Instalador *</label>
-            <select {...register('instalador_id')} className="input">
-              <option value="">Selecione...</option>
-              {instaladores.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
-            </select>
-            {errors.instalador_id && <p className="text-xs text-red-600 mt-1">{errors.instalador_id.message}</p>}
-          </div>
-          <div>
-            <label className="label">Obra *</label>
-            <select {...register('obra_id')} className="input">
-              <option value="">Selecione...</option>
-              {obras.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.numero_pedido ? `[${o.numero_pedido}] ` : ''}{o.cliente_nome}
-                </option>
-              ))}
-            </select>
-            {errors.obra_id && <p className="text-xs text-red-600 mt-1">{errors.obra_id.message}</p>}
-          </div>
-          <div>
-            <label className="label">Serviço *</label>
-            <select {...register('servico_id')} className="input">
-              <option value="">Selecione...</option>
-              {servicos.map((s) => (
-                <option key={s.id} value={s.id}>{s.descricao} — {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}</option>
-              ))}
-            </select>
-            {errors.servico_id && <p className="text-xs text-red-600 mt-1">{errors.servico_id.message}</p>}
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            {/* Campos compartilhados */}
             <div>
-              <label className="label">Quantidade *</label>
-              <input {...register('quantidade')} type="number" step="0.001" className="input" />
-              {errors.quantidade && <p className="text-xs text-red-600 mt-1">{errors.quantidade.message}</p>}
+              <label className="label">Instalador *</label>
+              <select {...register('instalador_id')} className="input">
+                <option value="">Selecione...</option>
+                {instaladores.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
+              </select>
+              {errors.instalador_id && <p className="text-xs text-red-500 mt-1">{errors.instalador_id.message}</p>}
+            </div>
+            <div>
+              <label className="label">Obra *</label>
+              <select {...register('obra_id')} className="input">
+                <option value="">Selecione...</option>
+                {obras.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.numero_pedido ? `[${o.numero_pedido}] ` : ''}{o.cliente_nome}
+                  </option>
+                ))}
+              </select>
+              {errors.obra_id && <p className="text-xs text-red-500 mt-1">{errors.obra_id.message}</p>}
             </div>
             <div>
               <label className="label">Data de Execução *</label>
               <input {...register('data_execucao')} type="date" className="input" />
-              {errors.data_execucao && <p className="text-xs text-red-600 mt-1">{errors.data_execucao.message}</p>}
+              {errors.data_execucao && <p className="text-xs text-red-500 mt-1">{errors.data_execucao.message}</p>}
             </div>
+
+            {/* Linhas de serviço */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="label mb-0">Serviços *</span>
+                <button
+                  type="button"
+                  onClick={() => append({ servico_id: 0, quantidade: 0 })}
+                  className="flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary-dark transition-colors"
+                >
+                  <Plus size={14} /> Adicionar serviço
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {fields.map((field, index) => (
+                  <div key={field.id} className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                        Serviço {fields.length > 1 ? index + 1 : ''}
+                      </span>
+                      {fields.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => remove(index)}
+                          className="p-1 text-gray-400 hover:text-red-500 transition-colors rounded-lg"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <select {...register(`servicos.${index}.servico_id`)} className="input">
+                        <option value="">Selecione um serviço...</option>
+                        {servicos.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.descricao} — {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}
+                          </option>
+                        ))}
+                      </select>
+                      {errors.servicos?.[index]?.servico_id && (
+                        <p className="text-xs text-red-500 mt-1">{errors.servicos[index].servico_id?.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        {...register(`servicos.${index}.quantidade`)}
+                        type="number"
+                        step="0.001"
+                        placeholder="Quantidade"
+                        className="input"
+                      />
+                      {errors.servicos?.[index]?.quantidade && (
+                        <p className="text-xs text-red-500 mt-1">{errors.servicos[index].quantidade?.message}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="label">Observação</label>
+              <textarea {...register('observacao')} className="input h-16 resize-none" />
+            </div>
+
+            {submitError && <p className="text-sm text-red-500">{submitError}</p>}
           </div>
-          <div>
-            <label className="label">Observação</label>
-            <textarea {...register('observacao')} className="input h-16 resize-none" />
-          </div>
-          {mutation.isError && (
-            <p className="text-sm text-red-600">
-              {getApiError(mutation.error)}
-            </p>
-          )}
-          <div className="flex justify-end gap-3 pt-2">
+
+          <div className="px-6 py-4 border-t dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={mutation.isPending} className="btn-primary">
-              {mutation.isPending ? 'Salvando...' : 'Salvar'}
+            <button type="submit" disabled={isSubmitting} className="btn-primary">
+              {isSubmitting
+                ? 'Salvando...'
+                : fields.length > 1
+                  ? `Salvar ${fields.length} serviços`
+                  : 'Salvar'}
             </button>
           </div>
         </form>
