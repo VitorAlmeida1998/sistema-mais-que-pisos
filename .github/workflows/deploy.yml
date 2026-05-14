@@ -1,0 +1,96 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── 1. Testes do backend (SQLite in-memory, sem PostgreSQL) ──────────────
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Rodar testes
+        run: pytest tests/ -v --cov=app --cov-report=term-missing
+        env:
+          DATABASE_URL: sqlite:///:memory:
+          SECRET_KEY: ci-secret-key-only-for-tests
+          ALGORITHM: HS256
+          ACCESS_TOKEN_EXPIRE_MINUTES: 30
+          REFRESH_TOKEN_EXPIRE_DAYS: 7
+          BCRYPT_ROUNDS: 4
+          CORS_ORIGINS: http://localhost
+          PDF_STORAGE_PATH: /tmp/pdfs
+          LOG_LEVEL: WARNING
+          ENVIRONMENT: test
+
+  # ── 2. Build e lint do frontend ──────────────────────────────────────────
+  build-frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Type check + build
+        run: npm run build
+
+  # ── 3. Deploy no EC2 (somente push na main) ──────────────────────────────
+  deploy:
+    name: Deploy EC2
+    needs: [test-backend, build-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: SSH → git pull → docker compose up
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/mqp
+
+            echo "==> Atualizando código"
+            git pull origin main
+
+            echo "==> Rebuilding e subindo containers"
+            docker compose up --build -d --remove-orphans
+
+            echo "==> Aguardando backend ficar saudável"
+            timeout 60 bash -c '
+              until docker compose exec -T backend curl -sf http://localhost:8000/health; do
+                sleep 3
+              done
+            '
+
+            echo "==> Deploy concluído"
+            docker compose ps
