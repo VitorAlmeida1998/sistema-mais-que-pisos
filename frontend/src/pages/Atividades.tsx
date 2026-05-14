@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, CheckCircle, Trash2 } from 'lucide-react'
+import { Plus, CheckCircle, Trash2, Pencil } from 'lucide-react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/services/api'
 import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
-import type { StatusAtividade } from '@/types'
+import type { Atividade, StatusAtividade } from '@/types'
 
 const linhaSchema = z.object({
   servico_id: z.coerce.number().min(1, 'Selecione um serviço'),
@@ -191,6 +191,69 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+const editSchema = z.object({
+  quantidade: z.coerce.number().positive('Quantidade deve ser positiva'),
+  data_execucao: z.string().min(1, 'Data obrigatória'),
+  observacao: z.string().optional(),
+})
+type EditFormData = z.infer<typeof editSchema>
+
+function EditAtividadeModal({ atividade, onClose }: { atividade: Atividade; onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<EditFormData>({
+    resolver: zodResolver(editSchema),
+    defaultValues: {
+      quantidade: Number(atividade.quantidade),
+      data_execucao: atividade.data_execucao,
+      observacao: atividade.observacao ?? '',
+    },
+  })
+
+  const mutation = useMutation({
+    mutationFn: (data: EditFormData) => atividadesApi.update(atividade.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades'] })
+      onClose()
+    },
+  })
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md">
+        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Editar Atividade</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
+          <div>
+            <label className="label">Quantidade *</label>
+            <input {...register('quantidade')} type="number" step="0.001" min="0.001" className="input" />
+            {errors.quantidade && <p className="text-xs text-red-500 mt-1">{errors.quantidade.message}</p>}
+          </div>
+          <div>
+            <label className="label">Data de Execução *</label>
+            <input {...register('data_execucao')} type="date" className="input" />
+            {errors.data_execucao && <p className="text-xs text-red-500 mt-1">{errors.data_execucao.message}</p>}
+          </div>
+          <div>
+            <label className="label">Observação</label>
+            <textarea {...register('observacao')} className="input h-16 resize-none" />
+          </div>
+          {mutation.isError && (
+            <p className="text-sm text-red-500">{getApiError(mutation.error)}</p>
+          )}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={isSubmitting || mutation.isPending} className="btn-primary">
+              {mutation.isPending ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 const statusBadge: Record<StatusAtividade, string> = {
   pendente: 'badge-pendente',
   aprovada: 'badge-aprovada',
@@ -198,9 +261,10 @@ const statusBadge: Record<StatusAtividade, string> = {
 }
 
 export default function Atividades() {
-  const { canWrite } = useAuth()
+  const { canWrite, isAdmin } = useAuth()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState<Atividade | undefined>()
   const [filterStatus, setFilterStatus] = useState<string>('')
 
   const { data = [], isLoading } = useQuery({
@@ -295,13 +359,21 @@ export default function Atividades() {
                               <CheckCircle size={14} /> Aprovar
                             </button>
                             <button
-                              onClick={() => handleDelete(a.id)}
-                              disabled={deleteMutation.isPending}
-                              className="p-1 text-gray-400 hover:text-red-600 rounded"
+                              onClick={() => setEditing(a)}
+                              className="p-1 text-gray-400 hover:text-primary rounded"
                             >
-                              <Trash2 size={14} />
+                              <Pencil size={14} />
                             </button>
                           </>
+                        )}
+                        {(isAdmin || a.status === 'pendente') && (
+                          <button
+                            onClick={() => handleDelete(a.id)}
+                            disabled={deleteMutation.isPending}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -315,6 +387,7 @@ export default function Atividades() {
       </div>
 
       {showModal && <AtividadeModal onClose={() => setShowModal(false)} />}
+      {editing && <EditAtividadeModal atividade={editing} onClose={() => setEditing(undefined)} />}
     </div>
   )
 }

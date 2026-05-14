@@ -61,3 +61,14 @@ def aprovar(
     current_user: Usuario = Depends(require_papel("admin", "gestor")),
 ) -> AtividadeResponse:
     return AtividadeService(db).aprovar(id, current_user.id)
+
+
+@router.delete("/{id}", status_code=204)
+def deletar(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_papel("admin", "gestor")),
+) -> None:
+    from app.models.usuario import PapelUsuario
+    is_admin = current_user.papel == PapelUsuario.admin
+    AtividadeService(db).deletar(id, current_user.id, is_admin)

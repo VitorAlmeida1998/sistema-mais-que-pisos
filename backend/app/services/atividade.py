@@ -78,6 +78,15 @@ class AtividadeService:
         updated = self.repo.update(item, updates)
         return self._enrich(updated)
 
+    def deletar(self, id: int, usuario_id: int, is_admin: bool) -> None:
+        item = self.repo.get_by_id(id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Atividade não encontrada")
+        if not is_admin and item.status != StatusAtividade.pendente:
+            raise HTTPException(status_code=400, detail="Apenas atividades pendentes podem ser excluídas")
+        set_audit_user(usuario_id)
+        self.repo.delete(item)
+
     def aprovar(self, id: int, aprovador_id: int) -> AtividadeResponse:
         item = self.repo.get_by_id(id)
         if not item:
