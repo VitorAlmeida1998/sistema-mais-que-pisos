@@ -7,7 +7,9 @@ import { z } from 'zod'
 import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/services/api'
 import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
-import type { Atividade, StatusAtividade } from '@/types'
+import type { Atividade, Instalador, StatusAtividade } from '@/types'
+
+// ── Schemas ──────────────────────────────────────────────────────────────────
 
 const linhaSchema = z.object({
   servico_id: z.coerce.number().min(1, 'Selecione um serviço'),
@@ -23,13 +25,25 @@ const schema = z.object({
 })
 type FormData = z.infer<typeof schema>
 
-function AtividadeModal({ onClose }: { onClose: () => void }) {
+const editSchema = z.object({
+  quantidade: z.coerce.number().positive('Quantidade deve ser positiva'),
+  data_execucao: z.string().min(1, 'Data obrigatória'),
+  observacao: z.string().optional(),
+})
+type EditFormData = z.infer<typeof editSchema>
+
+// ── Modal nova atividade ─────────────────────────────────────────────────────
+
+function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSelecionado?: number; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { servicos: [{ servico_id: 0, quantidade: 0 }] },
+    defaultValues: {
+      instalador_id: instaladorPreSelecionado ?? 0,
+      servicos: [{ servico_id: 0, quantidade: 0 }],
+    },
   })
 
   const { fields, append, remove } = useFieldArray({ control, name: 'servicos' })
@@ -80,10 +94,9 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
           <div className="p-6 space-y-4 overflow-y-auto flex-1">
-            {/* Campos compartilhados */}
             <div>
               <label className="label">Instalador *</label>
-              <select {...register('instalador_id')} className="input">
+              <select {...register('instalador_id')} className="input" disabled={!!instaladorPreSelecionado}>
                 <option value="">Selecione...</option>
                 {instaladores.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
               </select>
@@ -107,7 +120,6 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
               {errors.data_execucao && <p className="text-xs text-red-500 mt-1">{errors.data_execucao.message}</p>}
             </div>
 
-            {/* Linhas de serviço */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <span className="label mb-0">Serviços *</span>
@@ -119,7 +131,6 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
                   <Plus size={14} /> Adicionar serviço
                 </button>
               </div>
-
               <div className="space-y-3">
                 {fields.map((field, index) => (
                   <div key={field.id} className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3 space-y-2">
@@ -128,40 +139,29 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
                         Serviço {fields.length > 1 ? index + 1 : ''}
                       </span>
                       {fields.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => remove(index)}
-                          className="p-1 text-gray-400 hover:text-red-500 transition-colors rounded-lg"
-                        >
+                        <button type="button" onClick={() => remove(index)} className="p-1 text-gray-400 hover:text-red-500 rounded-lg">
                           <Trash2 size={14} />
                         </button>
                       )}
                     </div>
-                    <div>
-                      <select {...register(`servicos.${index}.servico_id`)} className="input">
-                        <option value="">Selecione um serviço...</option>
-                        {servicos.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.descricao} — {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}
-                          </option>
-                        ))}
-                      </select>
-                      {errors.servicos?.[index]?.servico_id && (
-                        <p className="text-xs text-red-500 mt-1">{errors.servicos[index].servico_id?.message}</p>
-                      )}
-                    </div>
-                    <div>
-                      <input
-                        {...register(`servicos.${index}.quantidade`)}
-                        type="number"
-                        step="0.001"
-                        placeholder="Quantidade"
-                        className="input"
-                      />
-                      {errors.servicos?.[index]?.quantidade && (
-                        <p className="text-xs text-red-500 mt-1">{errors.servicos[index].quantidade?.message}</p>
-                      )}
-                    </div>
+                    <select {...register(`servicos.${index}.servico_id`)} className="input">
+                      <option value="">Selecione um serviço...</option>
+                      {servicos.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.descricao} — {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.servicos?.[index]?.servico_id && (
+                      <p className="text-xs text-red-500 mt-1">{errors.servicos[index].servico_id?.message}</p>
+                    )}
+                    <input
+                      {...register(`servicos.${index}.quantidade`)}
+                      type="number" step="0.001" placeholder="Quantidade" className="input"
+                    />
+                    {errors.servicos?.[index]?.quantidade && (
+                      <p className="text-xs text-red-500 mt-1">{errors.servicos[index].quantidade?.message}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -171,18 +171,13 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
               <label className="label">Observação</label>
               <textarea {...register('observacao')} className="input h-16 resize-none" />
             </div>
-
             {submitError && <p className="text-sm text-red-500">{submitError}</p>}
           </div>
 
           <div className="px-6 py-4 border-t dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting} className="btn-primary">
-              {isSubmitting
-                ? 'Salvando...'
-                : fields.length > 1
-                  ? `Salvar ${fields.length} serviços`
-                  : 'Salvar'}
+              {isSubmitting ? 'Salvando...' : fields.length > 1 ? `Salvar ${fields.length} serviços` : 'Salvar'}
             </button>
           </div>
         </form>
@@ -191,12 +186,7 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-const editSchema = z.object({
-  quantidade: z.coerce.number().positive('Quantidade deve ser positiva'),
-  data_execucao: z.string().min(1, 'Data obrigatória'),
-  observacao: z.string().optional(),
-})
-type EditFormData = z.infer<typeof editSchema>
+// ── Modal editar atividade ───────────────────────────────────────────────────
 
 function EditAtividadeModal({ atividade, onClose }: { atividade: Atividade; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -211,10 +201,7 @@ function EditAtividadeModal({ atividade, onClose }: { atividade: Atividade; onCl
 
   const mutation = useMutation({
     mutationFn: (data: EditFormData) => atividadesApi.update(atividade.id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atividades'] })
-      onClose()
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atividades'] }); onClose() },
   })
 
   return (
@@ -239,9 +226,7 @@ function EditAtividadeModal({ atividade, onClose }: { atividade: Atividade; onCl
             <label className="label">Observação</label>
             <textarea {...register('observacao')} className="input h-16 resize-none" />
           </div>
-          {mutation.isError && (
-            <p className="text-sm text-red-500">{getApiError(mutation.error)}</p>
-          )}
+          {mutation.isError && <p className="text-sm text-red-500">{getApiError(mutation.error)}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting || mutation.isPending} className="btn-primary">
@@ -254,32 +239,51 @@ function EditAtividadeModal({ atividade, onClose }: { atividade: Atividade; onCl
   )
 }
 
+// ── Tabela de atividades de um instalador ────────────────────────────────────
+
 const statusBadge: Record<StatusAtividade, string> = {
   pendente: 'badge-pendente',
   aprovada: 'badge-aprovada',
   paga: 'badge-paga',
 }
 
-export default function Atividades() {
-  const { canWrite, isAdmin } = useAuth()
+function TabelaAtividades({
+  instalador,
+  filterStatus,
+  canWrite,
+  isAdmin,
+}: {
+  instalador: Instalador
+  filterStatus: string
+  canWrite: boolean
+  isAdmin: boolean
+}) {
   const queryClient = useQueryClient()
-  const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Atividade | undefined>()
-  const [filterStatus, setFilterStatus] = useState<string>('')
 
   const { data = [], isLoading } = useQuery({
-    queryKey: ['atividades', filterStatus],
-    queryFn: () => atividadesApi.list(filterStatus ? { status: filterStatus } : undefined).then((r) => r.data),
+    queryKey: ['atividades', instalador.id, filterStatus],
+    queryFn: () =>
+      atividadesApi.list({
+        instalador_id: instalador.id,
+        ...(filterStatus ? { status: filterStatus } : {}),
+      }).then((r) => r.data),
   })
 
   const aprovarMutation = useMutation({
     mutationFn: (id: number) => atividadesApi.aprovar(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atividades'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades', instalador.id] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => atividadesApi.delete(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atividades'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }) },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades', instalador.id] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
 
   function handleDelete(id: number) {
@@ -287,13 +291,135 @@ export default function Atividades() {
     deleteMutation.mutate(id)
   }
 
+  const totalValor = data.reduce((s, a) => s + parseFloat(a.valor_calculado), 0)
+
+  return (
+    <>
+      {/* Resumo */}
+      <div className="flex flex-wrap gap-4 px-1 mb-3 text-sm text-gray-500">
+        <span>{data.length} atividade(s)</span>
+        {data.length > 0 && (
+          <span className="font-semibold text-gray-700 dark:text-gray-300">
+            Total: {formatCurrency(totalValor)}
+          </span>
+        )}
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[580px]">
+            <thead>
+              <tr className="table-header">
+                <th className="px-4 py-3 text-left">Obra</th>
+                <th className="px-4 py-3 text-left hidden md:table-cell">Serviço</th>
+                <th className="px-4 py-3 text-right hidden sm:table-cell">Qtd</th>
+                <th className="px-4 py-3 text-right">Valor</th>
+                <th className="px-4 py-3 text-left">Data</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                {canWrite && <th className="px-4 py-3 text-left">Ações</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {isLoading ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+              ) : data.length === 0 ? (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhuma atividade encontrada</td></tr>
+              ) : (
+                data.map((a) => (
+                  <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="px-4 py-3">
+                      <span className="text-gray-700 dark:text-gray-300">{a.obra_cliente ?? `#${a.obra_id}`}</span>
+                      {a.obra_numero_pedido && (
+                        <span className="block font-mono text-[11px] text-gray-400">{a.obra_numero_pedido}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[150px] truncate hidden md:table-cell">
+                      {a.servico_descricao ?? `#${a.servico_id}`}
+                    </td>
+                    <td className="px-4 py-3 text-right dark:text-gray-300 hidden sm:table-cell">
+                      {formatQuantidade(a.quantidade)} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium dark:text-gray-200">{formatCurrency(a.valor_calculado)}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(a.data_execucao)}</td>
+                    <td className="px-4 py-3">
+                      <span className={statusBadge[a.status]}>{STATUS_ATIVIDADE_LABELS[a.status]}</span>
+                    </td>
+                    {canWrite && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          {a.status === 'pendente' && (
+                            <>
+                              <button
+                                onClick={() => aprovarMutation.mutate(a.id)}
+                                disabled={aprovarMutation.isPending}
+                                className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 font-medium"
+                              >
+                                <CheckCircle size={14} /> Aprovar
+                              </button>
+                              <button onClick={() => setEditing(a)} className="p-1 text-gray-400 hover:text-primary rounded">
+                                <Pencil size={14} />
+                              </button>
+                            </>
+                          )}
+                          {(isAdmin || a.status === 'pendente') && (
+                            <button
+                              onClick={() => handleDelete(a.id)}
+                              disabled={deleteMutation.isPending}
+                              className="p-1 text-gray-400 hover:text-red-600 rounded"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {editing && <EditAtividadeModal atividade={editing} onClose={() => setEditing(undefined)} />}
+    </>
+  )
+}
+
+// ── Página principal ─────────────────────────────────────────────────────────
+
+export default function Atividades() {
+  const { canWrite, isAdmin } = useAuth()
+  const [showModal, setShowModal] = useState(false)
+  const [abaAtiva, setAbaAtiva] = useState<number | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string>('')
+
+  const { data: instaladores = [], isLoading: loadingInstaladores } = useQuery({
+    queryKey: ['instaladores', false],
+    queryFn: () => instaladoresApi.list({ apenas_ativos: false }).then((r) => r.data),
+  })
+
+  const { data: todasAtividades = [] } = useQuery({
+    queryKey: ['atividades', 'pendentes-count'],
+    queryFn: () => atividadesApi.list({ status: 'pendente' }).then((r) => r.data),
+  })
+
+  const pendentePorInstalador = todasAtividades.reduce<Record<number, number>>((acc, a) => {
+    acc[a.instalador_id] = (acc[a.instalador_id] ?? 0) + 1
+    return acc
+  }, {})
+
+  const instaladorAtivo = instaladores.find((i) => i.id === abaAtiva) ?? instaladores[0] ?? null
+
+  if (!loadingInstaladores && instaladores.length > 0 && abaAtiva === null) {
+    setAbaAtiva(instaladores[0].id)
+  }
+
   return (
     <div>
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Atividades</h1>
-          <p className="text-sm text-gray-500">{data.length} registro(s)</p>
-        </div>
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <h1 className="text-2xl font-bold">Atividades</h1>
         <div className="flex flex-wrap items-center gap-3">
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input w-auto">
             <option value="">Todos os status</option>
@@ -309,85 +435,58 @@ export default function Atividades() {
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-        <table className="w-full text-sm min-w-[640px]">
-          <thead>
-            <tr className="table-header">
-              <th className="px-4 py-3 text-left">Instalador</th>
-              <th className="px-4 py-3 text-left hidden sm:table-cell">Obra</th>
-              <th className="px-4 py-3 text-left hidden md:table-cell">Serviço</th>
-              <th className="px-4 py-3 text-right hidden sm:table-cell">Qtd</th>
-              <th className="px-4 py-3 text-right">Valor</th>
-              <th className="px-4 py-3 text-left">Data</th>
-              <th className="px-4 py-3 text-left">Status</th>
-              {canWrite && <th className="px-4 py-3 text-left">Ações</th>}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-            {isLoading ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
-            ) : data.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Nenhuma atividade encontrada</td></tr>
-            ) : (
-              data.map((a) => (
-                <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{a.instalador_nome ?? `#${a.instalador_id}`}</td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="text-gray-600 dark:text-gray-400">{a.obra_cliente ?? `#${a.obra_id}`}</span>
-                    {a.obra_numero_pedido && (
-                      <span className="block font-mono text-[11px] text-gray-400 dark:text-gray-500">{a.obra_numero_pedido}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[150px] truncate hidden md:table-cell">{a.servico_descricao ?? `#${a.servico_id}`}</td>
-                  <td className="px-4 py-3 text-right dark:text-gray-300 hidden sm:table-cell">{formatQuantidade(a.quantidade)} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}</td>
-                  <td className="px-4 py-3 text-right font-medium dark:text-gray-200">{formatCurrency(a.valor_calculado)}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(a.data_execucao)}</td>
-                  <td className="px-4 py-3">
-                    <span className={statusBadge[a.status]}>{STATUS_ATIVIDADE_LABELS[a.status]}</span>
-                  </td>
-                  {canWrite && (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {a.status === 'pendente' && (
-                          <>
-                            <button
-                              onClick={() => aprovarMutation.mutate(a.id)}
-                              disabled={aprovarMutation.isPending}
-                              className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 font-medium"
-                            >
-                              <CheckCircle size={14} /> Aprovar
-                            </button>
-                            <button
-                              onClick={() => setEditing(a)}
-                              className="p-1 text-gray-400 hover:text-primary rounded"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          </>
-                        )}
-                        {(isAdmin || a.status === 'pendente') && (
-                          <button
-                            onClick={() => handleDelete(a.id)}
-                            disabled={deleteMutation.isPending}
-                            className="p-1 text-gray-400 hover:text-red-600 rounded"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* Abas de instaladores */}
+      {loadingInstaladores ? (
+        <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse mb-4" />
+      ) : (
+        <div className="flex gap-1 overflow-x-auto pb-1 mb-4 scrollbar-none">
+          {instaladores.map((inst) => {
+            const pendentes = pendentePorInstalador[inst.id] ?? 0
+            const ativo = inst.id === abaAtiva
+            return (
+              <button
+                key={inst.id}
+                onClick={() => setAbaAtiva(inst.id)}
+                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${
+                  ativo
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+                }`}
+              >
+                {inst.nome}
+                {!inst.ativo && (
+                  <span className="text-[10px] opacity-60">(inativo)</span>
+                )}
+                {pendentes > 0 && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
+                    ativo ? 'bg-white/30 text-white' : 'bg-amber-400 text-gray-900'
+                  }`}>
+                    {pendentes}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
-      </div>
+      )}
 
-      {showModal && <AtividadeModal onClose={() => setShowModal(false)} />}
-      {editing && <EditAtividadeModal atividade={editing} onClose={() => setEditing(undefined)} />}
+      {/* Conteúdo da aba ativa */}
+      {instaladorAtivo && (
+        <TabelaAtividades
+          key={instaladorAtivo.id}
+          instalador={instaladorAtivo}
+          filterStatus={filterStatus}
+          canWrite={canWrite}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {showModal && (
+        <AtividadeModal
+          instaladorPreSelecionado={abaAtiva ?? undefined}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   )
 }
