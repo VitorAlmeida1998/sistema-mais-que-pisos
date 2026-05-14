@@ -83,7 +83,7 @@ jobs:
             git pull origin main
 
             echo "==> Rebuilding e subindo containers"
-            docker compose up --build -d --remove-orphans
+            DOCKER_BUILDKIT=0 COMPOSE_DOCKER_CLI_BUILD=0 docker compose up --build -d --remove-orphans
 
             echo "==> Aguardando backend ficar saudável"
             timeout 60 bash -c '
