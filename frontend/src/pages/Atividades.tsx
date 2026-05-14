@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/services/api'
 import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
 import type { Atividade, Instalador, Servico, StatusAtividade } from '@/types'
 
@@ -365,6 +366,7 @@ function TabelaAtividades({
   isAdmin: boolean
 }) {
   const queryClient = useQueryClient()
+  const { confirm, dialog: confirmDialog } = useConfirm()
   const [editing, setEditing] = useState<Atividade | undefined>()
 
   const { data = [], isLoading } = useQuery({
@@ -398,8 +400,9 @@ function TabelaAtividades({
     onError: (err) => toast.error(getApiError(err)),
   })
 
-  function handleDelete(id: number) {
-    if (!window.confirm('Excluir esta atividade?')) return
+  async function handleDelete(id: number) {
+    const ok = await confirm('Excluir esta atividade?', 'Esta ação não pode ser desfeita.')
+    if (!ok) return
     deleteMutation.mutate(id)
   }
 
@@ -494,6 +497,7 @@ function TabelaAtividades({
       </div>
 
       {editing && <EditAtividadeModal atividade={editing} onClose={() => setEditing(undefined)} />}
+      {confirmDialog}
     </>
   )
 }

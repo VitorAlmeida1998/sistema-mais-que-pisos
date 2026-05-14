@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { instaladoresApi } from '@/services/api'
 import { formatCPF, getApiError } from '@/lib/utils'
+import { maskCPF, maskTelefone } from '@/lib/masks'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
 import type { Instalador } from '@/types'
 
@@ -33,7 +35,7 @@ function InstaladorModal({
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
-  const { register, handleSubmit, formState: { errors, isSubmitting }, watch } = useForm<FormData>({
+  const { register, control, handleSubmit, formState: { errors, isSubmitting }, watch } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: instalador
       ? {
@@ -85,12 +87,37 @@ function InstaladorModal({
           </div>
           <div>
             <label className="label">CPF *</label>
-            <input {...register('cpf')} className="input" placeholder="000.000.000-00" disabled={!!instalador} />
+            <Controller
+              name="cpf"
+              control={control}
+              render={({ field }) => (
+                <input
+                  className="input"
+                  placeholder="000.000.000-00"
+                  disabled={!!instalador}
+                  value={maskCPF(field.value || '')}
+                  onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
             {errors.cpf && <p className="text-xs text-red-600 mt-1">{errors.cpf.message}</p>}
           </div>
           <div>
             <label className="label">Telefone</label>
-            <input {...register('telefone')} className="input" />
+            <Controller
+              name="telefone"
+              control={control}
+              render={({ field }) => (
+                <input
+                  className="input"
+                  placeholder="(00) 00000-0000"
+                  value={maskTelefone(field.value || '')}
+                  onChange={(e) => field.onChange(maskTelefone(e.target.value))}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
           </div>
           <div>
             <label className="label">Chave PIX</label>
@@ -138,6 +165,7 @@ function InstaladorModal({
 export default function Instaladores() {
   const navigate = useNavigate()
   const { canWrite, isAdmin } = useAuth()
+  const { confirm, dialog } = useConfirm()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Instalador | undefined>()
@@ -158,8 +186,9 @@ export default function Instaladores() {
     onError: (err) => toast.error(getApiError(err)),
   })
 
-  function handleDelete(inst: Instalador) {
-    if (!window.confirm(`Excluir instalador "${inst.nome}"? Esta ação o tornará inativo.`)) return
+  async function handleDelete(inst: Instalador) {
+    const ok = await confirm(`Desativar "${inst.nome}"?`, 'O instalador ficará inativo e não aparecerá nos filtros ativos.')
+    if (!ok) return
     deleteMutation.mutate(inst.id)
   }
 
@@ -262,6 +291,7 @@ export default function Instaladores() {
           onClose={() => { setShowModal(false); setEditing(undefined) }}
         />
       )}
+      {dialog}
     </div>
   )
 }

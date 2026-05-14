@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { servicosApi } from '@/services/api'
 import { formatCurrency, UNIDADE_LABELS, getApiError } from '@/lib/utils'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
 import type { Servico } from '@/types'
 
@@ -87,6 +88,7 @@ function ServicoModal({ servico, onClose }: { servico?: Servico; onClose: () => 
 
 export default function Servicos() {
   const { isAdmin } = useAuth()
+  const { confirm, dialog } = useConfirm()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Servico | undefined>()
@@ -105,8 +107,9 @@ export default function Servicos() {
     onError: (err) => toast.error(getApiError(err)),
   })
 
-  function handleDelete(s: Servico) {
-    if (!window.confirm(`Excluir serviço "${s.descricao}"?`)) return
+  async function handleDelete(s: Servico) {
+    const ok = await confirm(`Excluir serviço "${s.descricao}"?`, 'Esta ação não pode ser desfeita.')
+    if (!ok) return
     deleteMutation.mutate(s.id)
   }
 
@@ -168,6 +171,7 @@ export default function Servicos() {
       </div>
 
       {showModal && <ServicoModal servico={editing} onClose={() => { setShowModal(false); setEditing(undefined) }} />}
+      {dialog}
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { obrasApi } from '@/services/api'
 import { formatDate, STATUS_OBRA_LABELS, getApiError } from '@/lib/utils'
+import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
 import type { Obra } from '@/types'
 
@@ -114,6 +115,7 @@ const statusBadge: Record<string, string> = {
 
 export default function Obras() {
   const { canWrite, isAdmin } = useAuth()
+  const { confirm, dialog } = useConfirm()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Obra | undefined>()
@@ -134,8 +136,9 @@ export default function Obras() {
     onError: (err) => toast.error(getApiError(err)),
   })
 
-  function handleDelete(obra: Obra) {
-    if (!window.confirm(`Excluir obra "${obra.cliente_nome}"? Esta ação a tornará inativa.`)) return
+  async function handleDelete(obra: Obra) {
+    const ok = await confirm(`Desativar obra de "${obra.cliente_nome}"?`, 'A obra ficará inativa e não aparecerá nos filtros ativos.')
+    if (!ok) return
     deleteMutation.mutate(obra.id)
   }
 
@@ -222,6 +225,7 @@ export default function Obras() {
       </div>
 
       {showModal && <ObraModal obra={editing} onClose={() => { setShowModal(false); setEditing(undefined) }} />}
+      {dialog}
     </div>
   )
 }
