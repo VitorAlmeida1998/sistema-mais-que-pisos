@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, UserCog } from 'lucide-react'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -133,7 +135,9 @@ export default function Usuarios() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+              <TableSkeleton cols={6} />
+            ) : data.length === 0 ? (
+              <EmptyState icon={UserCog} title="Nenhum usuário encontrado" />
             ) : (
               data.map((u) => (
                 <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">

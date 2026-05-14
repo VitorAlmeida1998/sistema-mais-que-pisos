@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users } from 'lucide-react'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -233,9 +235,9 @@ export default function Instaladores() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+              <TableSkeleton cols={canWrite ? 7 : 6} />
             ) : data.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhum instalador encontrado</td></tr>
+              <EmptyState icon={Users} title="Nenhum instalador encontrado" description="Adicione o primeiro instalador para começar." />
             ) : (
               data.map((inst) => (
                 <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">

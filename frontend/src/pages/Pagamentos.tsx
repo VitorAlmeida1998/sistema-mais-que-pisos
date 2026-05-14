@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { Download } from 'lucide-react'
+import { Download, History } from 'lucide-react'
+import { toast } from 'sonner'
 import { pagamentosApi } from '@/services/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 
 export default function Pagamentos() {
   const { data = [], isLoading } = useQuery({
@@ -19,7 +22,7 @@ export default function Pagamentos() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      alert('PDF não disponível para este pagamento.')
+      toast.error('PDF não disponível para este pagamento.')
     }
   }
 
@@ -49,9 +52,9 @@ export default function Pagamentos() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+              <TableSkeleton cols={8} />
             ) : data.length === 0 ? (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Nenhum pagamento encontrado</td></tr>
+              <EmptyState icon={History} title="Nenhum pagamento efetuado" description="Os fechamentos semanais confirmados aparecem aqui." />
             ) : (
               data.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">

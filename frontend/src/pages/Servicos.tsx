@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Wrench } from 'lucide-react'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -138,7 +140,9 @@ export default function Servicos() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+              <TableSkeleton cols={5} />
+            ) : data.length === 0 ? (
+              <EmptyState icon={Wrench} title="Nenhum serviço cadastrado" description="Adicione os tipos de serviço para usar nas atividades." />
             ) : (
               data.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">

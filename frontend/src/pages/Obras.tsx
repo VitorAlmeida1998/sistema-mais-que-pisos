@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Building2 } from 'lucide-react'
+import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -178,9 +180,9 @@ export default function Obras() {
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+              <TableSkeleton cols={canWrite ? 7 : 6} />
             ) : data.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhuma obra encontrada</td></tr>
+              <EmptyState icon={Building2} title="Nenhuma obra encontrada" description={apenasAtivas ? 'Não há obras ativas. Desmarque o filtro para ver todas.' : 'Cadastre a primeira obra para começar.'} />
             ) : (
               data.map((obra) => (
                 <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
