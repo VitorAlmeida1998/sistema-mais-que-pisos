@@ -13,7 +13,7 @@ import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/service
 import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
-import type { Atividade, Instalador, Servico, StatusAtividade } from '@/types'
+import type { Atividade, Instalador, Obra, Servico, StatusAtividade } from '@/types'
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -132,6 +132,103 @@ function ServicoAutocomplete({
   )
 }
 
+// ── Autocomplete de obras ────────────────────────────────────────────────────
+
+function ObraAutocomplete({
+  obras,
+  value,
+  onChange,
+  error,
+}: {
+  obras: Obra[]
+  value: number
+  onChange: (id: number) => void
+  error?: string
+}) {
+  const [query, setQuery] = useState('')
+  const [aberto, setAberto] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const selecionada = obras.find((o) => o.id === value)
+
+  useEffect(() => {
+    if (selecionada) setQuery(selecionada.numero_pedido ?? selecionada.cliente_nome)
+  }, [selecionada])
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtradas = query.length === 0
+    ? obras
+    : obras.filter((o) => {
+        const q = query.toLowerCase()
+        return (o.numero_pedido ?? '').toLowerCase().includes(q) || o.cliente_nome.toLowerCase().includes(q)
+      })
+
+  function selecionar(o: Obra) {
+    onChange(o.id)
+    setQuery(o.numero_pedido ?? o.cliente_nome)
+    setAberto(false)
+  }
+
+  function handleFocus() {
+    setAberto(true)
+    if (selecionada) setQuery('')
+  }
+
+  function handleBlur() {
+    setTimeout(() => {
+      if (!selecionada) { setQuery(''); onChange(0) }
+      else setQuery(selecionada.numero_pedido ?? selecionada.cliente_nome)
+    }, 150)
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        className={`input ${error ? 'border-red-500' : ''}`}
+        placeholder="Nº do pedido ou nome do cliente..."
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setAberto(true); if (!e.target.value) onChange(0) }}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+      />
+      {selecionada && (
+        <p className="text-xs text-gray-400 mt-1">
+          {selecionada.cliente_nome} · {selecionada.endereco}
+        </p>
+      )}
+      {aberto && filtradas.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+          {filtradas.map((o) => (
+            <li
+              key={o.id}
+              onMouseDown={() => selecionar(o)}
+              className="flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-xl last:rounded-b-xl"
+            >
+              <span className="text-gray-800 dark:text-gray-200">{o.cliente_nome}</span>
+              {o.numero_pedido && (
+                <span className="text-xs font-mono text-gray-400 ml-3 flex-shrink-0">{o.numero_pedido}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {aberto && filtradas.length === 0 && (
+        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
+          Nenhuma obra encontrada
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Modal nova atividade ─────────────────────────────────────────────────────
 
 function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSelecionado?: number; onClose: () => void }) {
@@ -203,14 +300,18 @@ function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSe
             </div>
             <div>
               <label className="label">Obra *</label>
-              <select {...register('obra_id')} className="input">
-                <option value="">Selecione...</option>
-                {obras.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.numero_pedido ? `[${o.numero_pedido}] ` : ''}{o.cliente_nome}
-                  </option>
-                ))}
-              </select>
+              <Controller
+                control={control}
+                name="obra_id"
+                render={({ field }) => (
+                  <ObraAutocomplete
+                    obras={obras}
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errors.obra_id?.message}
+                  />
+                )}
+              />
               {errors.obra_id && <p className="text-xs text-red-500 mt-1">{errors.obra_id.message}</p>}
             </div>
             <div>
