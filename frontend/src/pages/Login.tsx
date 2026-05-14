@@ -36,21 +36,20 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-sm">
-        <div className="card p-8">
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">MQ</span>
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Mais que Pisos</h1>
-              <p className="text-xs text-gray-500">Gestão de Pagamentos</p>
-            </div>
-          </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#0B1120] px-4 py-10">
+      {/* Logo acima do card */}
+      <img
+        src="/logo.png"
+        alt="Mais que Pisos"
+        className="h-12 w-auto object-contain mb-8 dark:brightness-0 dark:invert"
+      />
 
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-6">Entrar no sistema</h2>
+      <div className="w-full max-w-sm">
+        <div className="card p-6 sm:p-8">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Bem-vindo de volta</h2>
+            <p className="text-sm text-gray-400 mt-0.5">Entre com suas credenciais para continuar</p>
+          </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
@@ -62,7 +61,7 @@ export default function Login() {
                 placeholder="seu@email.com"
                 autoComplete="email"
               />
-              {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email.message}</p>}
+              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
             </div>
 
             <div>
@@ -74,16 +73,16 @@ export default function Login() {
                 placeholder="••••••••"
                 autoComplete="current-password"
               />
-              {errors.senha && <p className="text-xs text-red-600 mt-1">{errors.senha.message}</p>}
+              {errors.senha && <p className="text-xs text-red-500 mt-1">{errors.senha.message}</p>}
             </div>
 
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 text-sm text-red-700 dark:text-red-400">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl px-4 py-3 text-sm text-red-700 dark:text-red-400">
                 {error}
               </div>
             )}
 
-            <button type="submit" disabled={isSubmitting} className="btn-primary w-full">
+            <button type="submit" disabled={isSubmitting} className="btn-primary w-full mt-2">
               {isSubmitting ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
