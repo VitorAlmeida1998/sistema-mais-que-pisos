@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
@@ -138,6 +139,7 @@ function InstaladorModal({
 }
 
 export default function Instaladores() {
+  const navigate = useNavigate()
   const { canWrite, isAdmin } = useAuth()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
@@ -209,7 +211,14 @@ export default function Instaladores() {
             ) : (
               data.map((inst) => (
                 <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{inst.nome}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <button
+                      onClick={() => navigate(`/atividades?instalador=${inst.id}`)}
+                      className="text-primary hover:underline text-left"
+                    >
+                      {inst.nome}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatCPF(inst.cpf)}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{inst.telefone ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden md:table-cell">{inst.chave_pix ?? '—'}</td>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, CheckCircle, Trash2, Pencil } from 'lucide-react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
@@ -487,9 +488,12 @@ function TabelaAtividades({
 // ── Página principal ─────────────────────────────────────────────────────────
 
 export default function Atividades() {
+  const [searchParams] = useSearchParams()
+  const instaladorParam = searchParams.get('instalador') ? Number(searchParams.get('instalador')) : null
+
   const { canWrite, isAdmin } = useAuth()
   const [showModal, setShowModal] = useState(false)
-  const [abaAtiva, setAbaAtiva] = useState<number | null>(null)
+  const [abaAtiva, setAbaAtiva] = useState<number | null>(instaladorParam)
   const [filterStatus, setFilterStatus] = useState<string>('')
 
   const { data: instaladores = [], isLoading: loadingInstaladores } = useQuery({
