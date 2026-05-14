@@ -65,6 +65,8 @@ export const adiantamentosApi = {
   list: (params?: { instalador_id?: number }) =>
     api.get<Adiantamento[]>('/adiantamentos', { params }),
   create: (data: unknown) => api.post<Adiantamento>('/adiantamentos', data),
+  update: (id: number, data: unknown) => api.put<Adiantamento>(`/adiantamentos/${id}`, data),
+  delete: (id: number) => api.delete(`/adiantamentos/${id}`),
 }
 
 // Pagamentos
@@ -73,6 +75,7 @@ export const pagamentosApi = {
   efetivar: (data: unknown) => api.post<Pagamento>('/pagamentos', data),
   list: () => api.get<Pagamento[]>('/pagamentos'),
   recibo: (id: number) => api.get(`/pagamentos/${id}/recibo`, { responseType: 'blob' }),
+  atividades: (id: number) => api.get<Atividade[]>(`/pagamentos/${id}/atividades`),
 }
 
 // Relatórios

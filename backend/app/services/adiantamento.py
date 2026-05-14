@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.adiantamento import Adiantamento
 from app.repositories.adiantamento import AdiantamentoRepository
 from app.repositories.instalador import InstaladorRepository
-from app.schemas.adiantamento import AdiantamentoCreate, AdiantamentoResponse
+from app.schemas.adiantamento import AdiantamentoCreate, AdiantamentoUpdate, AdiantamentoResponse
 from app.utils.audit_listener import set_audit_user
 
 
@@ -27,6 +27,25 @@ class AdiantamentoService:
         else:
             items = self.repo.list_all_with_instalador(skip, limit)
         return [self._enrich(i) for i in items]
+
+    def atualizar(self, id: int, data: AdiantamentoUpdate, usuario_id: int) -> AdiantamentoResponse:
+        item = self.repo.get_by_id(id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Adiantamento não encontrado")
+        if item.pagamento_id is not None:
+            raise HTTPException(status_code=400, detail="Adiantamento já descontado em um pagamento")
+        set_audit_user(usuario_id)
+        updated = self.repo.update(item, data.model_dump(exclude_unset=True))
+        return self._enrich(updated)
+
+    def deletar(self, id: int, usuario_id: int) -> None:
+        item = self.repo.get_by_id(id)
+        if not item:
+            raise HTTPException(status_code=404, detail="Adiantamento não encontrado")
+        if item.pagamento_id is not None:
+            raise HTTPException(status_code=400, detail="Adiantamento já descontado em um pagamento")
+        set_audit_user(usuario_id)
+        self.repo.delete(item)
 
     def _enrich(self, a: Adiantamento) -> AdiantamentoResponse:
         r = AdiantamentoResponse.model_validate(a)

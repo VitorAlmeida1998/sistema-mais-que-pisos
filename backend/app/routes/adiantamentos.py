@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.usuario import Usuario
-from app.schemas.adiantamento import AdiantamentoCreate, AdiantamentoResponse
+from app.schemas.adiantamento import AdiantamentoCreate, AdiantamentoUpdate, AdiantamentoResponse
 from app.services.adiantamento import AdiantamentoService
 from app.utils.auth import get_current_user, require_papel
 
@@ -18,6 +18,25 @@ def listar(
     current_user: Usuario = Depends(get_current_user),
 ) -> list[AdiantamentoResponse]:
     return AdiantamentoService(db).listar(instalador_id, skip, limit)
+
+
+@router.put("/{id}", response_model=AdiantamentoResponse)
+def atualizar(
+    id: int,
+    data: AdiantamentoUpdate,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_papel("admin", "gestor")),
+) -> AdiantamentoResponse:
+    return AdiantamentoService(db).atualizar(id, data, current_user.id)
+
+
+@router.delete("/{id}", status_code=204)
+def deletar(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_papel("admin", "gestor")),
+) -> None:
+    AdiantamentoService(db).deletar(id, current_user.id)
 
 
 @router.post("", response_model=AdiantamentoResponse, status_code=201)

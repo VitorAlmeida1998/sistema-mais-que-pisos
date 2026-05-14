@@ -122,6 +122,21 @@ class PagamentoService:
             result.append(r)
         return result
 
+    def listar_atividades(self, pagamento_id: int) -> list[AtividadeResponse]:
+        self.obter(pagamento_id)
+        from sqlalchemy import select
+        from sqlalchemy.orm import joinedload
+        from app.models.atividade import Atividade
+        items = list(
+            self.db.execute(
+                select(Atividade)
+                .options(joinedload(Atividade.obra), joinedload(Atividade.servico))
+                .where(Atividade.pagamento_id == pagamento_id)
+                .order_by(Atividade.data_execucao)
+            ).scalars().unique().all()
+        )
+        return [self._enrich_atividade(a) for a in items]
+
     def obter(self, id: int) -> Pagamento:
         p = self.repo.get_by_id(id)
         if not p:

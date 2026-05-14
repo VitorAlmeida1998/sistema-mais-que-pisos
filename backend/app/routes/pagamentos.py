@@ -41,6 +41,15 @@ def listar(
     return PagamentoService(db).listar(skip, limit)
 
 
+@router.get("/{id}/atividades", response_model=list)
+def atividades_pagamento(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+) -> list:
+    return PagamentoService(db).listar_atividades(id)
+
+
 @router.get("/{id}/recibo")
 def recibo(
     id: int,

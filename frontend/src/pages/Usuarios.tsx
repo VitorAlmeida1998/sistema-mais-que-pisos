@@ -12,6 +12,29 @@ import { formatDate, PAPEL_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import type { Usuario } from '@/types'
 
+function PasswordStrength({ password }: { password: string }) {
+  if (!password) return null
+  const score = [
+    password.length >= 8,
+    /[A-Z]/.test(password),
+    /[0-9]/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ].filter(Boolean).length
+  const colors = ['', 'bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-green-500']
+  const textColors = ['', 'text-red-600 dark:text-red-400', 'text-orange-500', 'text-yellow-600', 'text-green-600 dark:text-green-400']
+  const labels = ['', 'Fraca', 'Razoável', 'Boa', 'Forte']
+  return (
+    <div className="mt-1.5">
+      <div className="flex gap-1 mb-1">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${i <= score ? colors[score] : 'bg-gray-200 dark:bg-gray-600'}`} />
+        ))}
+      </div>
+      <p className={`text-xs ${textColors[score]}`}>{labels[score]}</p>
+    </div>
+  )
+}
+
 const createSchema = z.object({
   nome: z.string().min(2),
   email: z.string().email(),
@@ -30,12 +53,13 @@ type UpdateData = z.infer<typeof updateSchema>
 
 function UsuarioModal({ usuario, onClose }: { usuario?: Usuario; onClose: () => void }) {
   const queryClient = useQueryClient()
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(usuario ? updateSchema : createSchema),
     defaultValues: usuario
       ? { nome: usuario.nome, email: usuario.email, papel: usuario.papel, ativo: usuario.ativo, senha: '' }
       : { papel: 'visualizador' as const },
   })
+  const senhaValue = watch('senha', '')
 
   const mutation = useMutation({
     mutationFn: (data: CreateData | UpdateData) => {
@@ -73,6 +97,7 @@ function UsuarioModal({ usuario, onClose }: { usuario?: Usuario; onClose: () => 
             <label className="label">{usuario ? 'Nova Senha (opcional)' : 'Senha *'}</label>
             <input {...register('senha')} type="password" className="input" placeholder={usuario ? 'Deixe em branco para manter' : ''} />
             {errors.senha && <p className="text-xs text-red-600 mt-1">{errors.senha.message}</p>}
+            <PasswordStrength password={senhaValue ?? ''} />
           </div>
           <div>
             <label className="label">Papel *</label>

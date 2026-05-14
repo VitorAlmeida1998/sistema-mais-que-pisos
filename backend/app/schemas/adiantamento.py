@@ -17,6 +17,19 @@ class AdiantamentoCreate(BaseModel):
         return v
 
 
+class AdiantamentoUpdate(BaseModel):
+    valor: Decimal | None = None
+    data: date | None = None
+    descricao: str | None = None
+
+    @field_validator("valor")
+    @classmethod
+    def valor_positivo(cls, v: Decimal | None) -> Decimal | None:
+        if v is not None and v <= 0:
+            raise ValueError("Valor deve ser positivo")
+        return v
+
+
 class AdiantamentoResponse(BaseModel):
     model_config = {"from_attributes": True}
 
