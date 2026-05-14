@@ -79,21 +79,36 @@ def _secao_instalador(instalador: dict, s: dict) -> list:
     return [Paragraph("DADOS DO INSTALADOR", s["section"]), table, Spacer(1, 0.3 * cm)]
 
 
+_UNIDADE_LABELS: dict[str, str] = {
+    "m2": "m²",
+    "metro_linear": "m lin.",
+    "diaria": "diária",
+    "unidade": "un.",
+}
+
+
+def _fmt_quantidade(qtd: str, unidade: str) -> str:
+    n = Decimal(str(qtd))
+    qtd_str = f"{int(n)}" if n % 1 == 0 else f"{n:.3f}".rstrip("0").replace(".", ",")
+    label = _UNIDADE_LABELS.get(unidade, unidade)
+    return f"{qtd_str} {label}"
+
+
 def _secao_atividades(atividades: list, s: dict) -> list:
-    headers = ["Data", "Obra/Cliente", "Serviço", "Qtd", "Unid.", "Valor Unit.", "Total"]
+    # Largura útil A4 com margens de 2cm = 17 cm
+    headers = ["Data", "Obra/Cliente", "Serviço", "Qtd/Unid.", "Valor Unit.", "Total"]
     rows = [headers] + [
         [
             str(a["data_execucao"]),
             a.get("obra_cliente", ""),
             a.get("servico_descricao", ""),
-            str(a["quantidade"]),
-            a.get("servico_unidade", ""),
+            _fmt_quantidade(a["quantidade"], a.get("servico_unidade", "")),
             _fmt_moeda(Decimal(str(a.get("valor_unitario", 0)))),
             _fmt_moeda(Decimal(str(a["valor_calculado"]))),
         ]
         for a in atividades
     ]
-    col_widths = [2.2 * cm, 4.5 * cm, 4 * cm, 1.5 * cm, 1.5 * cm, 2.5 * cm, 2.5 * cm]
+    col_widths = [1.9 * cm, 4.6 * cm, 4.5 * cm, 2.5 * cm, 2.5 * cm, 2.5 * cm]  # total = 17 cm
     table = Table(rows, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), VERMELHO),
@@ -105,6 +120,7 @@ def _secao_atividades(atividades: list, s: dict) -> list:
         ("ALIGN", (3, 0), (-1, -1), "RIGHT"),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("WORDWRAP", (0, 0), (-1, -1), True),
     ]))
     return [Paragraph("ATIVIDADES REALIZADAS", s["section"]), table, Spacer(1, 0.3 * cm)]
 
