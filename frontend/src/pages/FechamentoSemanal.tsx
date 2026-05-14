@@ -36,7 +36,25 @@ export default function FechamentoSemanal() {
         semana_fim: semanaFim,
         data_pagamento: new Date().toISOString().slice(0, 10),
       }),
-    onSuccess: () => { setPreview(null); setSucesso(true); setInstaladorId(''); setSemanaInicio(''); setSemanaFim('') },
+    onSuccess: async (response) => {
+      const pagamento = response.data
+      try {
+        const pdf = await pagamentosApi.recibo(pagamento.id)
+        const url = URL.createObjectURL(new Blob([pdf.data], { type: 'application/pdf' }))
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `recibo_pagamento_${pagamento.id}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } catch { /* pagamento ok, download falhou silenciosamente */ }
+      setPreview(null)
+      setSucesso(true)
+      setInstaladorId('')
+      setSemanaInicio('')
+      setSemanaFim('')
+    },
   })
 
   if (!isGestor) return <div className="text-center py-12 text-gray-500">Acesso restrito a gestores e administradores.</div>
