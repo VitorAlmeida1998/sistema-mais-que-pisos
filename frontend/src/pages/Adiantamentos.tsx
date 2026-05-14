@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { adiantamentosApi, instaladoresApi } from '@/services/api'
 import { formatCurrency, formatDate, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -30,7 +31,12 @@ function AdiantamentoModal({ onClose }: { onClose: () => void }) {
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => adiantamentosApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['adiantamentos'] }); onClose() },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adiantamentos'] })
+      toast.success('Adiantamento registrado')
+      onClose()
+    },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   return (
@@ -65,11 +71,6 @@ function AdiantamentoModal({ onClose }: { onClose: () => void }) {
             <label className="label">Descrição</label>
             <textarea {...register('descricao')} className="input h-16 resize-none" />
           </div>
-          {mutation.isError && (
-            <p className="text-sm text-red-600">
-              {getApiError(mutation.error)}
-            </p>
-          )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={mutation.isPending} className="btn-primary">

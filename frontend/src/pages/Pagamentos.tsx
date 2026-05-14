@@ -3,6 +3,7 @@ import { Download, History } from 'lucide-react'
 import { toast } from 'sonner'
 import { pagamentosApi } from '@/services/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { exportToExcel } from '@/lib/excel'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 
@@ -33,6 +34,26 @@ export default function Pagamentos() {
           <h1 className="text-2xl font-bold">Histórico de Pagamentos</h1>
           <p className="text-sm text-gray-500">{data.length} registro(s)</p>
         </div>
+        {data.length > 0 && (
+          <button
+            onClick={() => exportToExcel(
+              data.map((p) => ({
+                '#': p.id,
+                Instalador: p.instalador_nome ?? '',
+                'Período Início': p.semana_inicio,
+                'Período Fim': p.semana_fim,
+                'Valor Bruto': p.valor_bruto,
+                Adiantamentos: p.valor_adiantamentos,
+                'Valor Líquido': p.valor_liquido,
+                'Data Pagamento': p.data_pagamento ?? '',
+              })),
+              'historico_pagamentos'
+            )}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Download size={15} /> Exportar Excel
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden">

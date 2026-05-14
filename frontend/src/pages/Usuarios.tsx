@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { usuariosApi } from '@/services/api'
 import { formatDate, PAPEL_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -42,7 +43,12 @@ function UsuarioModal({ usuario, onClose }: { usuario?: Usuario; onClose: () => 
       if ('senha' in payload && !payload.senha) delete payload.senha
       return usuario ? usuariosApi.update(usuario.id, payload) : usuariosApi.create(payload)
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['usuarios'] }); onClose() },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+      toast.success(usuario ? 'Usuário atualizado' : 'Usuário criado')
+      onClose()
+    },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   return (
@@ -81,11 +87,6 @@ function UsuarioModal({ usuario, onClose }: { usuario?: Usuario; onClose: () => 
               <input type="checkbox" {...register('ativo')} id="ativo_u" className="rounded border-gray-300" />
               <label htmlFor="ativo_u" className="text-sm text-gray-700">Ativo</label>
             </div>
-          )}
-          {mutation.isError && (
-            <p className="text-sm text-red-600">
-              {getApiError(mutation.error)}
-            </p>
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>

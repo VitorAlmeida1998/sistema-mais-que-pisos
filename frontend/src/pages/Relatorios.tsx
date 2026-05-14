@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, Printer } from 'lucide-react'
+import { FileText, Printer, Download } from 'lucide-react'
 import { instaladoresApi, relatoriosApi } from '@/services/api'
 import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS } from '@/lib/utils'
+import { exportToExcel } from '@/lib/excel'
 
 export default function Relatorios() {
   const [instaladorId, setInstaladorId] = useState<number | ''>('')
@@ -49,9 +50,28 @@ export default function Relatorios() {
           <p className="text-sm text-gray-500">Histórico completo de atividades e pagamentos</p>
         </div>
         {data && (
-          <button onClick={imprimir} className="btn-secondary flex items-center gap-2">
-            <Printer size={16} /> Imprimir / PDF
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => exportToExcel(
+                data.atividades.map((a) => ({
+                  Data: a.data_execucao,
+                  Obra: a.obra_cliente ?? '',
+                  Serviço: a.servico_descricao ?? '',
+                  Quantidade: formatQuantidade(a.quantidade),
+                  Unidade: a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : '',
+                  Valor: a.valor_calculado,
+                  Status: STATUS_ATIVIDADE_LABELS[a.status],
+                })),
+                `relatorio_${data.instalador_nome.replace(/\s+/g, '_')}`
+              )}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <Download size={16} /> Excel
+            </button>
+            <button onClick={imprimir} className="btn-secondary flex items-center gap-2">
+              <Printer size={16} /> Imprimir
+            </button>
+          </div>
         )}
       </div>
 

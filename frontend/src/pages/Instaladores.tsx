@@ -172,6 +172,7 @@ export default function Instaladores() {
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Instalador | undefined>()
   const [apenasAtivos, setApenasAtivos] = useState(true)
+  const [search, setSearch] = useState('')
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['instaladores', apenasAtivos],
@@ -194,14 +195,23 @@ export default function Instaladores() {
     deleteMutation.mutate(inst.id)
   }
 
+  const filtered = data.filter((i) => i.nome.toLowerCase().includes(search.toLowerCase()))
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Instaladores</h1>
-          <p className="text-sm text-gray-500">{data.length} registro(s)</p>
+          <p className="text-sm text-gray-500">{filtered.length} registro(s)</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="Buscar por nome..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input w-48 text-sm"
+          />
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
             <input
               type="checkbox"
@@ -236,10 +246,10 @@ export default function Instaladores() {
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
               <TableSkeleton cols={canWrite ? 7 : 6} />
-            ) : data.length === 0 ? (
-              <EmptyState icon={Users} title="Nenhum instalador encontrado" description="Adicione o primeiro instalador para começar." />
+            ) : filtered.length === 0 ? (
+              <EmptyState icon={Users} title="Nenhum instalador encontrado" description={search ? 'Tente outro termo de busca.' : 'Adicione o primeiro instalador para começar.'} />
             ) : (
-              data.map((inst) => (
+              filtered.map((inst) => (
                 <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-3 font-medium">
                     <button

@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, CheckCircle, Trash2, Pencil, ClipboardList } from 'lucide-react'
+import { Plus, CheckCircle, Trash2, Pencil, ClipboardList, Download } from 'lucide-react'
+import { exportToExcel } from '@/lib/excel'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
@@ -413,12 +414,34 @@ function TabelaAtividades({
   return (
     <>
       {/* Resumo */}
-      <div className="flex flex-wrap gap-4 px-1 mb-3 text-sm text-gray-500">
-        <span>{data.length} atividade(s)</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1 mb-3">
+        <div className="flex gap-4 text-sm text-gray-500">
+          <span>{data.length} atividade(s)</span>
+          {data.length > 0 && (
+            <span className="font-semibold text-gray-700 dark:text-gray-300">
+              Total: {formatCurrency(totalValor)}
+            </span>
+          )}
+        </div>
         {data.length > 0 && (
-          <span className="font-semibold text-gray-700 dark:text-gray-300">
-            Total: {formatCurrency(totalValor)}
-          </span>
+          <button
+            onClick={() => exportToExcel(
+              data.map((a) => ({
+                Data: a.data_execucao,
+                Obra: a.obra_cliente ?? '',
+                'Nº Pedido': a.obra_numero_pedido ?? '',
+                Serviço: a.servico_descricao ?? '',
+                Quantidade: a.quantidade,
+                Unidade: a.servico_unidade ?? '',
+                Total: a.valor_calculado,
+                Status: a.status,
+              })),
+              `atividades_${instalador.nome.replace(/\s+/g, '_')}`
+            )}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-primary font-medium transition-colors"
+          >
+            <Download size={13} /> Exportar Excel
+          </button>
         )}
       </div>
 
@@ -542,6 +565,11 @@ export default function Atividades() {
     setAbaAtiva(instaladores[0].id)
   }
 
+  useEffect(() => {
+    if (abaAtiva === null) return
+    document.getElementById(`tab-inst-${abaAtiva}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [abaAtiva])
+
   return (
     <div>
       {/* Header */}
@@ -595,6 +623,7 @@ export default function Atividades() {
             const ativo = inst.id === abaAtiva
             return (
               <button
+                id={`tab-inst-${inst.id}`}
                 key={inst.id}
                 onClick={() => setAbaAtiva(inst.id)}
                 className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${
