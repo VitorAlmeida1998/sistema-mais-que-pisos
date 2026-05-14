@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { instaladoresApi } from '@/services/api'
 import { formatCPF, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -60,8 +61,10 @@ function InstaladorModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instaladores'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success(instalador ? 'Instalador atualizado' : 'Instalador cadastrado')
       onClose()
     },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   return (
@@ -120,12 +123,6 @@ function InstaladorModal({
             <textarea {...register('observacoes')} className="input h-20 resize-none" />
           </div>
 
-          {mutation.isError && (
-            <div className="col-span-2 text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded">
-              {getApiError(mutation.error)}
-            </div>
-          )}
-
           <div className="col-span-2 flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting || mutation.isPending} className="btn-primary">
@@ -156,7 +153,9 @@ export default function Instaladores() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instaladores'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Instalador desativado')
     },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   function handleDelete(inst: Instalador) {

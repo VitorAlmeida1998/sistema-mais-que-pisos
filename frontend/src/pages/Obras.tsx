@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { obrasApi } from '@/services/api'
 import { formatDate, STATUS_OBRA_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -43,8 +44,10 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['obras'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success(obra ? 'Obra atualizada' : 'Obra cadastrada')
       onClose()
     },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   return (
@@ -91,11 +94,6 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
             <label className="label">Observações</label>
             <textarea {...register('observacoes')} className="input h-20 resize-none" />
           </div>
-          {mutation.isError && (
-            <p className="text-sm text-red-600">
-              {getApiError(mutation.error)}
-            </p>
-          )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={mutation.isPending} className="btn-primary">
@@ -131,7 +129,9 @@ export default function Obras() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['obras'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Obra desativada')
     },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   function handleDelete(obra: Obra) {

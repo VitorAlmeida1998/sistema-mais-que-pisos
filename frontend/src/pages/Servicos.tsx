@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { toast } from 'sonner'
 import { servicosApi } from '@/services/api'
 import { formatCurrency, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -29,7 +30,12 @@ function ServicoModal({ servico, onClose }: { servico?: Servico; onClose: () => 
   const mutation = useMutation({
     mutationFn: (data: FormData) =>
       servico ? servicosApi.update(servico.id, data) : servicosApi.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['servicos'] }); onClose() },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['servicos'] })
+      toast.success(servico ? 'Serviço atualizado' : 'Serviço cadastrado')
+      onClose()
+    },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   return (
@@ -67,11 +73,6 @@ function ServicoModal({ servico, onClose }: { servico?: Servico; onClose: () => 
               <label htmlFor="ativo" className="text-sm text-gray-700">Ativo</label>
             </div>
           )}
-          {mutation.isError && (
-            <p className="text-sm text-red-600">
-              {getApiError(mutation.error)}
-            </p>
-          )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={mutation.isPending} className="btn-primary">
@@ -97,7 +98,11 @@ export default function Servicos() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => servicosApi.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['servicos'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['servicos'] })
+      toast.success('Serviço excluído')
+    },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   function handleDelete(s: Servico) {

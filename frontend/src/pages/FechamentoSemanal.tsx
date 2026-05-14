@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { pagamentosApi, instaladoresApi } from '@/services/api'
 import { formatCurrency, formatDate, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -11,7 +12,6 @@ export default function FechamentoSemanal() {
   const [semanaInicio, setSemanaInicio] = useState('')
   const [semanaFim, setSemanaFim] = useState('')
   const [preview, setPreview] = useState<PagamentoPreview | null>(null)
-  const [sucesso, setSucesso] = useState(false)
 
   const { data: instaladores = [] } = useQuery({
     queryKey: ['instaladores', true],
@@ -48,13 +48,17 @@ export default function FechamentoSemanal() {
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
-      } catch { /* pagamento ok, download falhou silenciosamente */ }
+        toast.success('Pagamento efetivado! PDF baixando...')
+      } catch {
+        toast.success('Pagamento efetivado!')
+        toast.error('Não foi possível baixar o PDF agora. Acesse em Pagamentos.')
+      }
       setPreview(null)
-      setSucesso(true)
       setInstaladorId('')
       setSemanaInicio('')
       setSemanaFim('')
     },
+    onError: (err) => toast.error(getApiError(err, 'Erro ao efetivar pagamento')),
   })
 
   if (!isGestor) return <div className="text-center py-12 text-gray-500">Acesso restrito a gestores e administradores.</div>
@@ -62,13 +66,6 @@ export default function FechamentoSemanal() {
   return (
     <div className="max-w-4xl">
       <h1 className="text-2xl font-bold mb-6">Fechamento Semanal</h1>
-
-      {sucesso && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6 flex items-center justify-between">
-          <p className="text-green-800 dark:text-green-300 font-medium">Pagamento efetivado com sucesso! O PDF foi gerado.</p>
-          <button onClick={() => setSucesso(false)} className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 text-xl">&times;</button>
-        </div>
-      )}
 
       {/* Formulário de busca */}
       <div className="card p-6 mb-6">
@@ -200,11 +197,6 @@ export default function FechamentoSemanal() {
                 {efetivarMutation.isPending ? 'Processando...' : 'Confirmar Pagamento e Gerar PDF'}
               </button>
             </div>
-          )}
-          {efetivarMutation.isError && (
-            <p className="text-sm text-red-600">
-              {getApiError(efetivarMutation.error, 'Erro ao efetivar')}
-            </p>
           )}
         </div>
       )}

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { Plus, CheckCircle, Trash2, Pencil } from 'lucide-react'
 import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -131,7 +132,6 @@ function ServicoAutocomplete({
 
 function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSelecionado?: number; onClose: () => void }) {
   const queryClient = useQueryClient()
-  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const { register, handleSubmit, control, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -157,7 +157,6 @@ function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSe
   })
 
   const onSubmit = async (data: FormData) => {
-    setSubmitError(null)
     try {
       await Promise.all(
         data.servicos.map((linha) =>
@@ -173,9 +172,10 @@ function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSe
       )
       queryClient.invalidateQueries({ queryKey: ['atividades'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success(data.servicos.length > 1 ? `${data.servicos.length} atividades registradas` : 'Atividade registrada')
       onClose()
     } catch (err) {
-      setSubmitError(getApiError(err))
+      toast.error(getApiError(err))
     }
   }
 
@@ -270,7 +270,6 @@ function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSe
               <label className="label">Observação</label>
               <textarea {...register('observacao')} className="input h-16 resize-none" />
             </div>
-            {submitError && <p className="text-sm text-red-500">{submitError}</p>}
           </div>
 
           <div className="px-6 py-4 border-t dark:border-gray-700 flex justify-end gap-3 flex-shrink-0">
@@ -300,7 +299,12 @@ function EditAtividadeModal({ atividade, onClose }: { atividade: Atividade; onCl
 
   const mutation = useMutation({
     mutationFn: (data: EditFormData) => atividadesApi.update(atividade.id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atividades'] }); onClose() },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['atividades'] })
+      toast.success('Atividade atualizada')
+      onClose()
+    },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   return (
@@ -325,7 +329,6 @@ function EditAtividadeModal({ atividade, onClose }: { atividade: Atividade; onCl
             <label className="label">Observação</label>
             <textarea {...register('observacao')} className="input h-16 resize-none" />
           </div>
-          {mutation.isError && <p className="text-sm text-red-500">{getApiError(mutation.error)}</p>}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={isSubmitting || mutation.isPending} className="btn-primary">
@@ -349,11 +352,15 @@ const statusBadge: Record<StatusAtividade, string> = {
 function TabelaAtividades({
   instalador,
   filterStatus,
+  dataInicio,
+  dataFim,
   canWrite,
   isAdmin,
 }: {
   instalador: Instalador
   filterStatus: string
+  dataInicio: string
+  dataFim: string
   canWrite: boolean
   isAdmin: boolean
 }) {
@@ -361,11 +368,13 @@ function TabelaAtividades({
   const [editing, setEditing] = useState<Atividade | undefined>()
 
   const { data = [], isLoading } = useQuery({
-    queryKey: ['atividades', instalador.id, filterStatus],
+    queryKey: ['atividades', instalador.id, filterStatus, dataInicio, dataFim],
     queryFn: () =>
       atividadesApi.list({
         instalador_id: instalador.id,
         ...(filterStatus ? { status: filterStatus } : {}),
+        ...(dataInicio ? { data_inicio: dataInicio } : {}),
+        ...(dataFim ? { data_fim: dataFim } : {}),
       }).then((r) => r.data),
   })
 
@@ -374,7 +383,9 @@ function TabelaAtividades({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades', instalador.id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Atividade aprovada')
     },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   const deleteMutation = useMutation({
@@ -382,7 +393,9 @@ function TabelaAtividades({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['atividades', instalador.id] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Atividade excluída')
     },
+    onError: (err) => toast.error(getApiError(err)),
   })
 
   function handleDelete(id: number) {
@@ -495,6 +508,8 @@ export default function Atividades() {
   const [showModal, setShowModal] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState<number | null>(instaladorParam)
   const [filterStatus, setFilterStatus] = useState<string>('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
 
   const { data: instaladores = [], isLoading: loadingInstaladores } = useQuery({
     queryKey: ['instaladores', false],
@@ -522,13 +537,36 @@ export default function Atividades() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <h1 className="text-2xl font-bold">Atividades</h1>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="date"
+            value={dataInicio}
+            onChange={(e) => setDataInicio(e.target.value)}
+            className="input w-auto text-sm"
+            title="Data início"
+          />
+          <span className="text-gray-400 text-sm">até</span>
+          <input
+            type="date"
+            value={dataFim}
+            onChange={(e) => setDataFim(e.target.value)}
+            className="input w-auto text-sm"
+            title="Data fim"
+          />
           <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input w-auto">
             <option value="">Todos os status</option>
             <option value="pendente">Pendente</option>
             <option value="aprovada">Aprovada</option>
             <option value="paga">Paga</option>
           </select>
+          {(dataInicio || dataFim || filterStatus) && (
+            <button
+              onClick={() => { setDataInicio(''); setDataFim(''); setFilterStatus('') }}
+              className="text-xs text-gray-400 hover:text-gray-600 underline"
+            >
+              Limpar filtros
+            </button>
+          )}
           {canWrite && (
             <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
               <Plus size={16} /> Nova Atividade
@@ -578,6 +616,8 @@ export default function Atividades() {
           key={instaladorAtivo.id}
           instalador={instaladorAtivo}
           filterStatus={filterStatus}
+          dataInicio={dataInicio}
+          dataFim={dataFim}
           canWrite={canWrite}
           isAdmin={isAdmin}
         />
