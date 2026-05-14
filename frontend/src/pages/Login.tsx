@@ -41,7 +41,7 @@ export default function Login() {
       <img
         src="/logo.png"
         alt="Mais que Pisos"
-        className="h-12 w-auto object-contain mb-8 dark:brightness-0 dark:invert"
+        className="h-20 w-auto object-contain mb-8 dark:brightness-0 dark:invert"
       />
 
       <div className="w-full max-w-sm">
