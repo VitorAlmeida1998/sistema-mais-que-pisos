@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth'
 import type { Obra } from '@/types'
 
 const schema = z.object({
+  numero_pedido: z.string().optional(),
   cliente_nome: z.string().min(2, 'Nome obrigatório'),
   endereco: z.string().min(5, 'Endereço obrigatório'),
   data_inicio: z.string().min(1, 'Data obrigatória'),
@@ -25,6 +26,7 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
     resolver: zodResolver(schema),
     defaultValues: obra
       ? {
+          numero_pedido: obra.numero_pedido ?? '',
           cliente_nome: obra.cliente_nome,
           endereco: obra.endereco,
           data_inicio: obra.data_inicio,
@@ -53,6 +55,10 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
+          <div>
+            <label className="label">Nº do Pedido</label>
+            <input {...register('numero_pedido')} className="input" placeholder="Ex: PED-2024-001" />
+          </div>
           <div>
             <label className="label">Cliente *</label>
             <input {...register('cliente_nome')} className="input" />
@@ -144,26 +150,32 @@ export default function Obras() {
         <table className="w-full text-sm min-w-[540px]">
           <thead>
             <tr className="table-header">
+              <th className="px-4 py-3 text-left hidden sm:table-cell">Nº Pedido</th>
               <th className="px-4 py-3 text-left">Cliente</th>
               <th className="px-4 py-3 text-left hidden md:table-cell">Endereço</th>
-              <th className="px-4 py-3 text-left">Início</th>
-              <th className="px-4 py-3 text-left hidden sm:table-cell">Previsão</th>
+              <th className="px-4 py-3 text-left hidden lg:table-cell">Início</th>
+              <th className="px-4 py-3 text-left hidden lg:table-cell">Previsão</th>
               <th className="px-4 py-3 text-left">Status</th>
               {canWrite && <th className="px-4 py-3 text-left">Ações</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
             ) : data.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhuma obra encontrada</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Nenhuma obra encontrada</td></tr>
             ) : (
               data.map((obra) => (
                 <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    {obra.numero_pedido
+                      ? <span className="font-mono text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-lg">{obra.numero_pedido}</span>
+                      : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                  </td>
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{obra.cliente_nome}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs truncate hidden md:table-cell">{obra.endereco}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(obra.data_inicio)}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{obra.data_fim_prevista ? formatDate(obra.data_fim_prevista) : '—'}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden lg:table-cell">{formatDate(obra.data_inicio)}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden lg:table-cell">{obra.data_fim_prevista ? formatDate(obra.data_fim_prevista) : '—'}</td>
                   <td className="px-4 py-3">
                     <span className={statusBadge[obra.status] ?? 'badge-inativo'}>
                       {STATUS_OBRA_LABELS[obra.status]}

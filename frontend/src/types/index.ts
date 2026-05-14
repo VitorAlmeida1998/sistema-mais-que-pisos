@@ -30,6 +30,7 @@ export interface Instalador {
 
 export interface Obra {
   id: number
+  numero_pedido: string | null
   cliente_nome: string
   endereco: string
   data_inicio: string

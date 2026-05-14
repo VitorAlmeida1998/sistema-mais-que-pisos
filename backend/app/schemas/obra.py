@@ -4,6 +4,7 @@ from app.models.obra import StatusObra
 
 
 class ObraCreate(BaseModel):
+    numero_pedido: str | None = None
     cliente_nome: str
     endereco: str
     data_inicio: date
@@ -18,6 +19,7 @@ class ObraCreate(BaseModel):
 
 
 class ObraUpdate(BaseModel):
+    numero_pedido: str | None = None
     cliente_nome: str | None = None
     endereco: str | None = None
     data_inicio: date | None = None
@@ -31,6 +33,7 @@ class ObraResponse(BaseModel):
     model_config = {"from_attributes": True}
 
     id: int
+    numero_pedido: str | None
     cliente_nome: str
     endereco: str
     data_inicio: date

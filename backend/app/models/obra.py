@@ -15,6 +15,7 @@ class Obra(Base):
     __tablename__ = "obras"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    numero_pedido: Mapped[str | None] = mapped_column(String(100))
     cliente_nome: Mapped[str] = mapped_column(String(200), nullable=False)
     endereco: Mapped[str] = mapped_column(String(500), nullable=False)
     data_inicio: Mapped[date] = mapped_column(Date, nullable=False)
