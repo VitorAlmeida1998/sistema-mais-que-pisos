@@ -1,13 +1,13 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, CheckCircle, Trash2, Pencil } from 'lucide-react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/services/api'
 import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
-import type { Atividade, Instalador, StatusAtividade } from '@/types'
+import type { Atividade, Instalador, Servico, StatusAtividade } from '@/types'
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +31,100 @@ const editSchema = z.object({
   observacao: z.string().optional(),
 })
 type EditFormData = z.infer<typeof editSchema>
+
+// ── Autocomplete de serviços ─────────────────────────────────────────────────
+
+function ServicoAutocomplete({
+  servicos,
+  value,
+  onChange,
+  error,
+}: {
+  servicos: Servico[]
+  value: number
+  onChange: (id: number) => void
+  error?: string
+}) {
+  const [query, setQuery] = useState('')
+  const [aberto, setAberto] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  const selecionado = servicos.find((s) => s.id === value)
+
+  useEffect(() => {
+    if (selecionado) setQuery(selecionado.descricao)
+  }, [selecionado])
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const filtrados = query.length === 0
+    ? servicos
+    : servicos.filter((s) => s.descricao.toLowerCase().includes(query.toLowerCase()))
+
+  function selecionar(s: Servico) {
+    onChange(s.id)
+    setQuery(s.descricao)
+    setAberto(false)
+  }
+
+  function handleFocus() {
+    setAberto(true)
+    if (selecionado) setQuery('')
+  }
+
+  function handleBlur() {
+    setTimeout(() => {
+      if (!selecionado) { setQuery(''); onChange(0) }
+      else setQuery(selecionado.descricao)
+    }, 150)
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        className={`input ${error ? 'border-red-500' : ''}`}
+        placeholder="Digite para buscar serviço..."
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setAberto(true); if (!e.target.value) onChange(0) }}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+      />
+      {selecionado && (
+        <p className="text-xs text-gray-400 mt-1">
+          {formatCurrency(selecionado.valor_unitario)} / {UNIDADE_LABELS[selecionado.unidade]}
+        </p>
+      )}
+      {aberto && filtrados.length > 0 && (
+        <ul className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg max-h-52 overflow-y-auto">
+          {filtrados.map((s) => (
+            <li
+              key={s.id}
+              onMouseDown={() => selecionar(s)}
+              className="flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-xl last:rounded-b-xl"
+            >
+              <span className="text-gray-800 dark:text-gray-200">{s.descricao}</span>
+              <span className="text-xs text-gray-400 ml-3 flex-shrink-0">
+                {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {aberto && filtrados.length === 0 && (
+        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg px-4 py-3 text-sm text-gray-400">
+          Nenhum serviço encontrado
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Modal nova atividade ─────────────────────────────────────────────────────
 
@@ -144,14 +238,18 @@ function AtividadeModal({ instaladorPreSelecionado, onClose }: { instaladorPreSe
                         </button>
                       )}
                     </div>
-                    <select {...register(`servicos.${index}.servico_id`)} className="input">
-                      <option value="">Selecione um serviço...</option>
-                      {servicos.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.descricao} — {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}
-                        </option>
-                      ))}
-                    </select>
+                    <Controller
+                      control={control}
+                      name={`servicos.${index}.servico_id`}
+                      render={({ field }) => (
+                        <ServicoAutocomplete
+                          servicos={servicos}
+                          value={field.value}
+                          onChange={field.onChange}
+                          error={errors.servicos?.[index]?.servico_id?.message}
+                        />
+                      )}
+                    />
                     {errors.servicos?.[index]?.servico_id && (
                       <p className="text-xs text-red-500 mt-1">{errors.servicos[index].servico_id?.message}</p>
                     )}
