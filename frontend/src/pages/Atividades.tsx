@@ -13,6 +13,9 @@ import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/service
 import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
+import { usePagination } from '@/hooks/usePagination'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { Pagination } from '@/components/ui/Pagination'
 import type { Atividade, Instalador, Obra, Servico, StatusAtividade } from '@/types'
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
@@ -472,6 +475,7 @@ function TabelaAtividades({
   const queryClient = useQueryClient()
   const { confirm, dialog: confirmDialog } = useConfirm()
   const [editing, setEditing] = useState<Atividade | undefined>()
+  const pageSize = useResponsivePageSize()
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['atividades', instalador.id, filterStatus, dataInicio, dataFim],
@@ -510,6 +514,7 @@ function TabelaAtividades({
     deleteMutation.mutate(id)
   }
 
+  const { page, setPage, paginated, total } = usePagination(data, pageSize)
   const totalValor = data.reduce((s, a) => s + parseFloat(a.valor_calculado), 0)
 
   return (
@@ -517,7 +522,7 @@ function TabelaAtividades({
       {/* Resumo */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-1 mb-3">
         <div className="flex gap-4 text-sm text-gray-500">
-          <span>{data.length} atividade(s)</span>
+          <span>{total} atividade(s)</span>
           {data.length > 0 && (
             <span className="font-semibold text-gray-700 dark:text-gray-300">
               Total: {formatCurrency(totalValor)}
@@ -570,7 +575,7 @@ function TabelaAtividades({
                   description={filterStatus || dataInicio || dataFim ? 'Tente ajustar ou limpar os filtros.' : 'Registre a primeira atividade deste instalador.'}
                 />
               ) : (
-                data.map((a) => (
+                paginated.map((a) => (
                   <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <td className="px-4 py-3">
                       <span className="text-gray-700 dark:text-gray-300">{a.obra_cliente ?? `#${a.obra_id}`}</span>
@@ -624,6 +629,7 @@ function TabelaAtividades({
             </tbody>
           </table>
         </div>
+        <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
       </div>
 
       {editing && <EditAtividadeModal atividade={editing} onClose={() => setEditing(undefined)} />}

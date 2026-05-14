@@ -11,6 +11,9 @@ import { obrasApi } from '@/services/api'
 import { formatDate, STATUS_OBRA_LABELS, getApiError } from '@/lib/utils'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
+import { usePagination } from '@/hooks/usePagination'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { Pagination } from '@/components/ui/Pagination'
 import type { Obra } from '@/types'
 
 const schema = z.object({
@@ -149,13 +152,15 @@ export default function Obras() {
     o.cliente_nome.toLowerCase().includes(search.toLowerCase()) ||
     (o.numero_pedido ?? '').toLowerCase().includes(search.toLowerCase())
   )
+  const pageSize = useResponsivePageSize()
+  const { page, setPage, paginated, total } = usePagination(filtered, pageSize)
 
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Obras</h1>
-          <p className="text-sm text-gray-500">{filtered.length} registro(s)</p>
+          <p className="text-sm text-gray-500">{total} registro(s)</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -197,7 +202,7 @@ export default function Obras() {
             ) : filtered.length === 0 ? (
               <EmptyState icon={Building2} title="Nenhuma obra encontrada" description={search ? 'Tente outro termo de busca.' : apenasAtivas ? 'Não há obras ativas. Desmarque o filtro para ver todas.' : 'Cadastre a primeira obra para começar.'} />
             ) : (
-              filtered.map((obra) => (
+              paginated.map((obra) => (
                 <tr key={obra.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-3 hidden sm:table-cell">
                     {obra.numero_pedido
@@ -236,6 +241,7 @@ export default function Obras() {
             )}
           </tbody>
         </table>
+        <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
         </div>
       </div>
 

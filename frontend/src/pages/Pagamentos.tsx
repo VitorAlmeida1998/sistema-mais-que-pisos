@@ -9,6 +9,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Pagination } from '@/components/ui/Pagination'
 import { usePagination } from '@/hooks/usePagination'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import type { Atividade, Pagamento } from '@/types'
 
 function AtividadesModal({ pagamento, onClose }: { pagamento: Pagamento; onClose: () => void }) {
@@ -82,7 +83,8 @@ export default function Pagamentos() {
     queryFn: () => pagamentosApi.list().then((r) => r.data),
   })
 
-  const { page, setPage, paginated, total } = usePagination(data, 20)
+  const pageSize = useResponsivePageSize()
+  const { page, setPage, paginated, total } = usePagination(data, pageSize)
 
   const downloadRecibo = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -177,7 +179,7 @@ export default function Pagamentos() {
             </tbody>
           </table>
         </div>
-        <Pagination page={page} total={total} pageSize={20} onChange={setPage} />
+        <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
       </div>
 
       {selected && <AtividadesModal pagamento={selected} onClose={() => setSelected(null)} />}

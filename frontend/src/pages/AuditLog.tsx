@@ -7,6 +7,7 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Pagination } from '@/components/ui/Pagination'
 import { usePagination } from '@/hooks/usePagination'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 
 export default function AuditLogPage() {
   const { isAdmin } = useAuth()
@@ -19,7 +20,8 @@ export default function AuditLogPage() {
       auditLogApi.list({ entidade: entidade || undefined, acao: acao || undefined }).then((r) => r.data),
   })
 
-  const { page, setPage, paginated, total } = usePagination(data, 30)
+  const pageSize = useResponsivePageSize()
+  const { page, setPage, paginated, total } = usePagination(data, pageSize)
 
   if (!isAdmin) return <div className="text-center py-12 text-gray-500">Acesso restrito a administradores.</div>
 
@@ -99,7 +101,7 @@ export default function AuditLogPage() {
             </tbody>
           </table>
         </div>
-        <Pagination page={page} total={total} pageSize={30} onChange={setPage} />
+        <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
       </div>
     </div>
   )

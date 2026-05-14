@@ -13,6 +13,9 @@ import { formatCPF, getApiError } from '@/lib/utils'
 import { maskCPF, maskTelefone } from '@/lib/masks'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
+import { usePagination } from '@/hooks/usePagination'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { Pagination } from '@/components/ui/Pagination'
 import type { Instalador } from '@/types'
 
 const schema = z.object({
@@ -196,13 +199,15 @@ export default function Instaladores() {
   }
 
   const filtered = data.filter((i) => i.nome.toLowerCase().includes(search.toLowerCase()))
+  const pageSize = useResponsivePageSize()
+  const { page, setPage, paginated, total } = usePagination(filtered, pageSize)
 
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Instaladores</h1>
-          <p className="text-sm text-gray-500">{filtered.length} registro(s)</p>
+          <p className="text-sm text-gray-500">{total} registro(s)</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <input
@@ -249,7 +254,7 @@ export default function Instaladores() {
             ) : filtered.length === 0 ? (
               <EmptyState icon={Users} title="Nenhum instalador encontrado" description={search ? 'Tente outro termo de busca.' : 'Adicione o primeiro instalador para começar.'} />
             ) : (
-              filtered.map((inst) => (
+              paginated.map((inst) => (
                 <tr key={inst.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-3 font-medium">
                     <button
@@ -294,6 +299,7 @@ export default function Instaladores() {
             )}
           </tbody>
         </table>
+        <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
         </div>
       </div>
 

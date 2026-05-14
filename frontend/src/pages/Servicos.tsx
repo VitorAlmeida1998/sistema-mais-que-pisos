@@ -11,6 +11,9 @@ import { servicosApi } from '@/services/api'
 import { formatCurrency, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
+import { usePagination } from '@/hooks/usePagination'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
+import { Pagination } from '@/components/ui/Pagination'
 import type { Servico } from '@/types'
 
 const schema = z.object({
@@ -99,6 +102,8 @@ export default function Servicos() {
     queryKey: ['servicos'],
     queryFn: () => servicosApi.list({ apenas_ativos: false }).then((r) => r.data),
   })
+  const pageSize = useResponsivePageSize()
+  const { page, setPage, paginated, total } = usePagination(data, pageSize)
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => servicosApi.delete(id),
@@ -120,7 +125,10 @@ export default function Servicos() {
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
-        <h1 className="text-2xl font-bold">Serviços</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Serviços</h1>
+          <p className="text-sm text-gray-500">{total} registro(s)</p>
+        </div>
         <button onClick={() => { setEditing(undefined); setShowModal(true) }} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> Novo Serviço
         </button>
@@ -144,7 +152,7 @@ export default function Servicos() {
             ) : data.length === 0 ? (
               <EmptyState icon={Wrench} title="Nenhum serviço cadastrado" description="Adicione os tipos de serviço para usar nas atividades." />
             ) : (
-              data.map((s) => (
+              paginated.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{s.descricao}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{UNIDADE_LABELS[s.unidade]}</td>
@@ -171,6 +179,7 @@ export default function Servicos() {
             )}
           </tbody>
         </table>
+        <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
         </div>
       </div>
 

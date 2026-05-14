@@ -13,6 +13,7 @@ import { formatCurrency, formatDate, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useConfirm } from '@/hooks/useConfirm'
 import { usePagination } from '@/hooks/usePagination'
+import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import type { Adiantamento } from '@/types'
 
 const schema = z.object({
@@ -124,7 +125,8 @@ export default function Adiantamentos() {
     queryFn: () => adiantamentosApi.list().then((r) => r.data),
   })
 
-  const { page, setPage, paginated, total } = usePagination(data, 20)
+  const pageSize = useResponsivePageSize()
+  const { page, setPage, paginated, total } = usePagination(data, pageSize)
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => adiantamentosApi.delete(id),
@@ -231,7 +233,7 @@ export default function Adiantamentos() {
             </tbody>
           </table>
         </div>
-        <Pagination page={page} total={total} pageSize={20} onChange={setPage} />
+        <Pagination page={page} total={total} pageSize={pageSize} onChange={setPage} />
       </div>
 
       {showModal && <AdiantamentoModal adiantamento={editing} onClose={closeModal} />}
