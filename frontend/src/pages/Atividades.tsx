@@ -213,6 +213,16 @@ export default function Atividades() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atividades'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }) },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => atividadesApi.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atividades'] }); queryClient.invalidateQueries({ queryKey: ['dashboard'] }) },
+  })
+
+  function handleDelete(id: number) {
+    if (!window.confirm('Excluir esta atividade?')) return
+    deleteMutation.mutate(id)
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
@@ -274,15 +284,26 @@ export default function Atividades() {
                   </td>
                   {canWrite && (
                     <td className="px-4 py-3">
-                      {a.status === 'pendente' && (
-                        <button
-                          onClick={() => aprovarMutation.mutate(a.id)}
-                          disabled={aprovarMutation.isPending}
-                          className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 font-medium"
-                        >
-                          <CheckCircle size={14} /> Aprovar
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {a.status === 'pendente' && (
+                          <>
+                            <button
+                              onClick={() => aprovarMutation.mutate(a.id)}
+                              disabled={aprovarMutation.isPending}
+                              className="flex items-center gap-1 text-xs text-green-700 hover:text-green-900 font-medium"
+                            >
+                              <CheckCircle size={14} /> Aprovar
+                            </button>
+                            <button
+                              onClick={() => handleDelete(a.id)}
+                              disabled={deleteMutation.isPending}
+                              className="p-1 text-gray-400 hover:text-red-600 rounded"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

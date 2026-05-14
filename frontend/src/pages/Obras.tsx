@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -115,7 +115,8 @@ const statusBadge: Record<string, string> = {
 }
 
 export default function Obras() {
-  const { canWrite } = useAuth()
+  const { canWrite, isAdmin } = useAuth()
+  const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Obra | undefined>()
   const [apenasAtivas, setApenasAtivas] = useState(true)
@@ -124,6 +125,19 @@ export default function Obras() {
     queryKey: ['obras', apenasAtivas],
     queryFn: () => obrasApi.list({ apenas_ativas: apenasAtivas }).then((r) => r.data),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => obrasApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['obras'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
+  function handleDelete(obra: Obra) {
+    if (!window.confirm(`Excluir obra "${obra.cliente_nome}"? Esta ação a tornará inativa.`)) return
+    deleteMutation.mutate(obra.id)
+  }
 
   return (
     <div>
@@ -183,9 +197,20 @@ export default function Obras() {
                   </td>
                   {canWrite && (
                     <td className="px-4 py-3">
-                      <button onClick={() => { setEditing(obra); setShowModal(true) }} className="p-1 text-gray-400 hover:text-primary rounded">
-                        <Pencil size={15} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => { setEditing(obra); setShowModal(true) }} className="p-1 text-gray-400 hover:text-primary rounded">
+                          <Pencil size={15} />
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDelete(obra)}
+                            disabled={deleteMutation.isPending}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -138,7 +138,8 @@ function InstaladorModal({
 }
 
 export default function Instaladores() {
-  const { canWrite } = useAuth()
+  const { canWrite, isAdmin } = useAuth()
+  const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Instalador | undefined>()
   const [apenasAtivos, setApenasAtivos] = useState(true)
@@ -147,6 +148,19 @@ export default function Instaladores() {
     queryKey: ['instaladores', apenasAtivos],
     queryFn: () => instaladoresApi.list({ apenas_ativos: apenasAtivos }).then((r) => r.data),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => instaladoresApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instaladores'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
+  function handleDelete(inst: Instalador) {
+    if (!window.confirm(`Excluir instalador "${inst.nome}"? Esta ação o tornará inativo.`)) return
+    deleteMutation.mutate(inst.id)
+  }
 
   return (
     <div>
@@ -207,12 +221,23 @@ export default function Instaladores() {
                   </td>
                   {canWrite && (
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => { setEditing(inst); setShowModal(true) }}
-                        className="p-1 text-gray-400 hover:text-primary rounded"
-                      >
-                        <Pencil size={15} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => { setEditing(inst); setShowModal(true) }}
+                          className="p-1 text-gray-400 hover:text-primary rounded"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        {isAdmin && (
+                          <button
+                            onClick={() => handleDelete(inst)}
+                            disabled={deleteMutation.isPending}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>

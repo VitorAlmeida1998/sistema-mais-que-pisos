@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -86,6 +86,7 @@ function ServicoModal({ servico, onClose }: { servico?: Servico; onClose: () => 
 
 export default function Servicos() {
   const { isAdmin } = useAuth()
+  const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Servico | undefined>()
 
@@ -93,6 +94,16 @@ export default function Servicos() {
     queryKey: ['servicos'],
     queryFn: () => servicosApi.list({ apenas_ativos: false }).then((r) => r.data),
   })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => servicosApi.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['servicos'] }),
+  })
+
+  function handleDelete(s: Servico) {
+    if (!window.confirm(`Excluir serviço "${s.descricao}"?`)) return
+    deleteMutation.mutate(s.id)
+  }
 
   if (!isAdmin) return <div className="text-center py-12 text-gray-500">Acesso restrito a administradores.</div>
 
@@ -130,9 +141,18 @@ export default function Servicos() {
                     <span className={s.ativo ? 'badge-ativo' : 'badge-inativo'}>{s.ativo ? 'Ativo' : 'Inativo'}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => { setEditing(s); setShowModal(true) }} className="p-1 text-gray-400 hover:text-primary rounded">
-                      <Pencil size={15} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => { setEditing(s); setShowModal(true) }} className="p-1 text-gray-400 hover:text-primary rounded">
+                        <Pencil size={15} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(s)}
+                        disabled={deleteMutation.isPending}
+                        className="p-1 text-gray-400 hover:text-red-600 rounded"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

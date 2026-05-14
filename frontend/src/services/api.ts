@@ -24,6 +24,7 @@ export const instaladoresApi = {
   get: (id: number) => api.get<Instalador>(`/instaladores/${id}`),
   create: (data: unknown) => api.post<Instalador>('/instaladores', data),
   update: (id: number, data: unknown) => api.put<Instalador>(`/instaladores/${id}`, data),
+  delete: (id: number) => api.delete(`/instaladores/${id}`),
 }
 
 // Obras
@@ -33,6 +34,7 @@ export const obrasApi = {
   get: (id: number) => api.get<Obra>(`/obras/${id}`),
   create: (data: unknown) => api.post<Obra>('/obras', data),
   update: (id: number, data: unknown) => api.put<Obra>(`/obras/${id}`, data),
+  delete: (id: number) => api.delete(`/obras/${id}`),
 }
 
 // Serviços
@@ -42,6 +44,7 @@ export const servicosApi = {
   get: (id: number) => api.get<Servico>(`/servicos/${id}`),
   create: (data: unknown) => api.post<Servico>('/servicos', data),
   update: (id: number, data: unknown) => api.put<Servico>(`/servicos/${id}`, data),
+  delete: (id: number) => api.delete(`/servicos/${id}`),
 }
 
 // Atividades
@@ -52,6 +55,7 @@ export const atividadesApi = {
   create: (data: unknown) => api.post<Atividade>('/atividades', data),
   update: (id: number, data: unknown) => api.put<Atividade>(`/atividades/${id}`, data),
   aprovar: (id: number) => api.post<Atividade>(`/atividades/${id}/aprovar`),
+  delete: (id: number) => api.delete(`/atividades/${id}`),
 }
 
 // Adiantamentos
