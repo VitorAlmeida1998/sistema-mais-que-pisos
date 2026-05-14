@@ -94,6 +94,7 @@ class AtividadeService:
             r.instalador_nome = a.instalador.nome
         if hasattr(a, "obra") and a.obra:
             r.obra_cliente = a.obra.cliente_nome
+            r.obra_numero_pedido = a.obra.numero_pedido
         if hasattr(a, "servico") and a.servico:
             r.servico_descricao = a.servico.descricao
             r.servico_unidade = a.servico.unidade

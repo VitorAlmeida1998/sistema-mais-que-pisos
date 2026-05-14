@@ -65,6 +65,7 @@ export interface Atividade {
   criado_em: string
   instalador_nome?: string
   obra_cliente?: string
+  obra_numero_pedido?: string | null
   servico_descricao?: string
   servico_unidade?: string
 }

@@ -51,6 +51,7 @@ class AtividadeResponse(BaseModel):
 
     instalador_nome: str | None = None
     obra_cliente: str | None = None
+    obra_numero_pedido: str | None = None
     servico_descricao: str | None = None
     servico_unidade: str | None = None
 

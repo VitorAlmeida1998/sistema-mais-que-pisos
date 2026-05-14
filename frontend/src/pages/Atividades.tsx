@@ -63,7 +63,11 @@ function AtividadeModal({ onClose }: { onClose: () => void }) {
             <label className="label">Obra *</label>
             <select {...register('obra_id')} className="input">
               <option value="">Selecione...</option>
-              {obras.map((o) => <option key={o.id} value={o.id}>{o.cliente_nome}</option>)}
+              {obras.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.numero_pedido ? `[${o.numero_pedido}] ` : ''}{o.cliente_nome}
+                </option>
+              ))}
             </select>
             {errors.obra_id && <p className="text-xs text-red-600 mt-1">{errors.obra_id.message}</p>}
           </div>
@@ -178,7 +182,12 @@ export default function Atividades() {
               data.map((a) => (
                 <tr key={a.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{a.instalador_nome ?? `#${a.instalador_id}`}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400 hidden sm:table-cell">{a.obra_cliente ?? `#${a.obra_id}`}</td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <span className="text-gray-600 dark:text-gray-400">{a.obra_cliente ?? `#${a.obra_id}`}</span>
+                    {a.obra_numero_pedido && (
+                      <span className="block font-mono text-[11px] text-gray-400 dark:text-gray-500">{a.obra_numero_pedido}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[150px] truncate hidden md:table-cell">{a.servico_descricao ?? `#${a.servico_id}`}</td>
                   <td className="px-4 py-3 text-right dark:text-gray-300 hidden sm:table-cell">{a.quantidade} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}</td>
                   <td className="px-4 py-3 text-right font-medium dark:text-gray-200">{formatCurrency(a.valor_calculado)}</td>
