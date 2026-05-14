@@ -22,6 +22,11 @@ export function formatCPF(cpf: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`
 }
 
+export function formatQuantidade(value: string | number): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  return num % 1 === 0 ? num.toFixed(0) : num.toString().replace('.', ',')
+}
+
 export const UNIDADE_LABELS: Record<string, string> = {
   m2: 'm²',
   unidade: 'unidade',

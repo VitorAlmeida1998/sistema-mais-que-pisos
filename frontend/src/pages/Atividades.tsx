@@ -5,7 +5,7 @@ import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { atividadesApi, instaladoresApi, obrasApi, servicosApi } from '@/services/api'
-import { formatCurrency, formatDate, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
+import { formatCurrency, formatDate, formatQuantidade, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import type { StatusAtividade } from '@/types'
 
@@ -276,7 +276,7 @@ export default function Atividades() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-[150px] truncate hidden md:table-cell">{a.servico_descricao ?? `#${a.servico_id}`}</td>
-                  <td className="px-4 py-3 text-right dark:text-gray-300 hidden sm:table-cell">{a.quantidade} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}</td>
+                  <td className="px-4 py-3 text-right dark:text-gray-300 hidden sm:table-cell">{formatQuantidade(a.quantidade)} {a.servico_unidade ? UNIDADE_LABELS[a.servico_unidade] : ''}</td>
                   <td className="px-4 py-3 text-right font-medium dark:text-gray-200">{formatCurrency(a.valor_calculado)}</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{formatDate(a.data_execucao)}</td>
                   <td className="px-4 py-3">
