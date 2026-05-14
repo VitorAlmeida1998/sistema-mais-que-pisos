@@ -42,7 +42,7 @@ export function useConfirm() {
           <button onClick={handleCancel} className="btn-secondary">Cancelar</button>
           <button
             onClick={handleConfirm}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-xl transition-colors"
+            className="btn-danger"
           >
             {state.confirmLabel}
           </button>

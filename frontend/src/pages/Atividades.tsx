@@ -680,25 +680,34 @@ export default function Atividades() {
   return (
     <div>
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
-        <h1 className="text-2xl font-bold">Atividades</h1>
+      <div className="mb-4">
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <h1 className="text-2xl font-bold">Atividades</h1>
+          {canWrite && (
+            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> Nova Atividade
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="date"
-            value={dataInicio}
-            onChange={(e) => setDataInicio(e.target.value)}
-            className="input w-auto text-sm"
-            title="Data início"
-          />
-          <span className="text-gray-400 text-sm">até</span>
-          <input
-            type="date"
-            value={dataFim}
-            onChange={(e) => setDataFim(e.target.value)}
-            className="input w-auto text-sm"
-            title="Data fim"
-          />
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input w-auto">
+          <div className="flex items-center gap-1.5 flex-1 sm:flex-none">
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="input flex-1 sm:w-auto text-sm"
+              title="Data início"
+            />
+            <span className="text-gray-400 text-sm flex-shrink-0">—</span>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="input flex-1 sm:w-auto text-sm"
+              title="Data fim"
+            />
+          </div>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="input w-full sm:w-auto text-sm">
             <option value="">Todos os status</option>
             <option value="pendente">Pendente</option>
             <option value="aprovada">Aprovada</option>
@@ -707,14 +716,9 @@ export default function Atividades() {
           {(dataInicio || dataFim || filterStatus) && (
             <button
               onClick={() => { setDataInicio(''); setDataFim(''); setFilterStatus('') }}
-              className="text-xs text-gray-400 hover:text-gray-600 underline"
+              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline"
             >
               Limpar filtros
-            </button>
-          )}
-          {canWrite && (
-            <button onClick={() => setShowModal(true)} className="btn-primary flex items-center gap-2">
-              <Plus size={16} /> Nova Atividade
             </button>
           )}
         </div>

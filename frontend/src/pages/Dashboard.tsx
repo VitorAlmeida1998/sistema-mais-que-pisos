@@ -111,7 +111,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {isLoading
           ? [...Array(4)].map((_, i) => (
               <div key={i} className="card p-6 animate-pulse h-32" />
@@ -133,10 +133,10 @@ export default function Dashboard() {
                       <card.icon size={20} className={card.iconColor} />
                     </div>
                   </div>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mb-1">
+                  <p className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-1">
                     {displayValue}
                   </p>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                  <p className="text-[11px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wide">
                     {card.label}
                   </p>
                 </div>
@@ -191,8 +191,8 @@ export default function Dashboard() {
               />
               <Tooltip content={<ChartTooltip formatter={formatCurrency} />} cursor={{ fill: 'rgba(0,0,0,0.03)', radius: 8 }} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 16 }} />
-              <Bar dataKey="Valor Pago" fill="#10B981" radius={[6, 6, 0, 0]} />
-              <Bar dataKey="Adiantamentos" fill="#F59E0B" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="Valor Pago" fill="#10B981" radius={[6, 6, 0, 0]} maxBarSize={48} />
+              <Bar dataKey="Adiantamentos" fill="#F59E0B" radius={[6, 6, 0, 0]} maxBarSize={48} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -227,7 +227,7 @@ export default function Dashboard() {
                 width={32}
               />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)', radius: 8 }} />
-              <Bar dataKey="Pagamentos" fill="#DC2626" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="Pagamentos" fill="#DC2626" radius={[6, 6, 0, 0]} maxBarSize={48} />
             </BarChart>
           </ResponsiveContainer>
         )}

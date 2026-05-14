@@ -19,7 +19,7 @@ export function Layout() {
 
       <div className="flex-1 flex flex-col lg:ml-64 min-w-0">
         {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 bg-white/80 dark:bg-[#0F172A]/90 backdrop-blur-md border-b border-gray-100 dark:border-white/[0.06] px-4 py-3 lg:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-3 bg-white/80 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-white/[0.06] px-4 py-3 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors"

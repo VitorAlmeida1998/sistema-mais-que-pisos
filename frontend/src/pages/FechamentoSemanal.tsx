@@ -70,7 +70,7 @@ export default function FechamentoSemanal() {
       {/* Formulário de busca */}
       <div className="card p-6 mb-6">
         <h2 className="text-base font-semibold mb-4">Parâmetros</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="label">Instalador *</label>
             <select value={instaladorId} onChange={(e) => setInstaladorId(e.target.value)} className="input">

@@ -30,13 +30,13 @@ export function Pagination({ page, total, pageSize, onChange }: Props) {
         {start}–{end} de {total}
       </span>
       <div className="flex items-center gap-0.5">
-        {btn(<ChevronsLeft size={15} />, 1, page === 1)}
+        <span className="hidden sm:block">{btn(<ChevronsLeft size={15} />, 1, page === 1)}</span>
         {btn(<ChevronLeft size={15} />, page - 1, page === 1)}
-        <span className="px-3 text-gray-600 dark:text-gray-300 text-xs font-medium">
+        <span className="px-3 text-gray-600 dark:text-gray-300 text-xs font-medium whitespace-nowrap">
           {page} / {totalPages}
         </span>
         {btn(<ChevronRight size={15} />, page + 1, page === totalPages)}
-        {btn(<ChevronsRight size={15} />, totalPages, page === totalPages)}
+        <span className="hidden sm:block">{btn(<ChevronsRight size={15} />, totalPages, page === totalPages)}</span>
       </div>
     </div>
   )

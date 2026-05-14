@@ -59,7 +59,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <aside className={cn(
       'fixed left-0 top-0 z-50 w-64 flex flex-col h-screen transition-transform duration-200 ease-in-out',
-      'bg-[#B91C1C] dark:bg-[#7F1D1D] border-r border-black/10',
+      'bg-red-700 dark:bg-red-900 border-r border-black/10',
       'lg:translate-x-0',
       isOpen ? 'translate-x-0' : '-translate-x-full'
     )}>
@@ -76,7 +76,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5 scrollbar-none">
-        <p className="text-[10px] font-bold text-red-200/50 uppercase tracking-widest px-3 mb-3">
+        <p className="text-[10px] font-bold text-red-200/70 uppercase tracking-widest px-3 mb-3">
           Navegação
         </p>
         {navItems
@@ -113,7 +113,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {user && <UserAvatar nome={user.nome} />}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-white truncate">{user?.nome}</p>
-            <p className="text-[11px] text-red-200/70 truncate capitalize">{user?.papel}</p>
+            <p className="text-[11px] text-red-100/80 truncate capitalize">{user?.papel}</p>
           </div>
           <div className="flex items-center gap-0.5">
             <button
