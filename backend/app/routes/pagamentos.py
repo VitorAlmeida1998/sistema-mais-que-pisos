@@ -56,13 +56,14 @@ def recibo(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> FileResponse:
-    svc = PagamentoService(db)
-    pagamento = svc.obter(id)
-    if not pagamento.comprovante_pdf_path or not os.path.exists(pagamento.comprovante_pdf_path):
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="PDF não disponível")
+    from app.services.pdf_generator import gerar_recibo_pdf
+    from starlette.background import BackgroundTask
+
+    pdf_data = PagamentoService(db).get_pdf_data(id)
+    path = gerar_recibo_pdf(pdf_data)
     return FileResponse(
-        pagamento.comprovante_pdf_path,
+        path,
         media_type="application/pdf",
         filename=f"recibo_pagamento_{id}.pdf",
+        background=BackgroundTask(os.unlink, path),
     )

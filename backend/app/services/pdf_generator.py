@@ -4,8 +4,6 @@ import os
 import tempfile
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
-
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -13,10 +11,6 @@ from reportlab.lib.units import cm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
 )
-
-from app.config import get_settings
-
-settings = get_settings()
 
 VERMELHO = colors.HexColor("#DC2626")
 VERMELHO_ESCURO = colors.HexColor("#991B1B")
@@ -347,9 +341,8 @@ def gerar_relatorio_obra_pdf(obra: dict, atividades: list[dict]) -> str:
 
 
 def gerar_recibo_pdf(pagamento_data: dict) -> str:
-    storage = Path(settings.PDF_STORAGE_PATH)
-    storage.mkdir(parents=True, exist_ok=True)
-    filepath = storage / f"recibo_pagamento_{pagamento_data['id']}.pdf"
+    fd, path = tempfile.mkstemp(suffix=".pdf", prefix="recibo_pagamento_")
+    os.close(fd)
 
     s = _estilos()
     story = (
@@ -363,9 +356,9 @@ def gerar_recibo_pdf(pagamento_data: dict) -> str:
     )
 
     doc = SimpleDocTemplate(
-        str(filepath), pagesize=A4,
+        path, pagesize=A4,
         rightMargin=2 * cm, leftMargin=2 * cm,
         topMargin=2 * cm, bottomMargin=2 * cm,
     )
     doc.build(story)
-    return str(filepath)
+    return path

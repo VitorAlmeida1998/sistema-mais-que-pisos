@@ -152,6 +152,29 @@ class PagamentoService:
             r.servico_unidade = a.servico.unidade
         return r
 
+    def get_pdf_data(self, id: int) -> dict:
+        from sqlalchemy import select
+        from sqlalchemy.orm import joinedload
+        from app.models.atividade import Atividade
+        from app.models.adiantamento import Adiantamento
+
+        pagamento = self.obter(id)
+        instalador = self.inst_repo.get_by_id(pagamento.instalador_id)
+        atividades = list(
+            self.db.execute(
+                select(Atividade)
+                .options(joinedload(Atividade.obra), joinedload(Atividade.servico))
+                .where(Atividade.pagamento_id == id)
+                .order_by(Atividade.data_execucao)
+            ).scalars().unique().all()
+        )
+        adiantamentos = list(
+            self.db.execute(
+                select(Adiantamento).where(Adiantamento.pagamento_id == id)
+            ).scalars().all()
+        )
+        return self._build_pdf_data(pagamento, instalador, atividades, adiantamentos)
+
     def _build_pdf_data(self, pagamento: Pagamento, instalador: "Instalador", atividades: list, adiantamentos: list) -> dict:  # type: ignore[name-defined]
         from decimal import Decimal as D
         return {
