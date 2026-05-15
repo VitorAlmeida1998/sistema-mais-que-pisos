@@ -174,6 +174,7 @@ class PagamentoService:
                 {
                     "data_execucao": str(a.data_execucao),
                     "obra_cliente": a.obra.cliente_nome if a.obra else "",
+                    "obra_numero_pedido": a.obra.numero_pedido if a.obra else None,
                     "servico_descricao": a.servico.descricao if a.servico else "",
                     "servico_unidade": a.servico.unidade if a.servico else "",
                     "quantidade": a.quantidade,

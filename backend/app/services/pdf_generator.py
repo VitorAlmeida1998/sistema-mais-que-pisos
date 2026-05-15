@@ -98,11 +98,21 @@ def _fmt_quantidade(qtd: str, unidade: str) -> str:
 
 def _secao_atividades(atividades: list, s: dict) -> list:
     # Largura útil A4 com margens de 2cm = 17 cm
+    _cell = ParagraphStyle("rcell", fontSize=8, leading=10)
+
+    def _obra_cell(a: dict) -> Paragraph:
+        cliente = a.get("obra_cliente") or ""
+        pedido = a.get("obra_numero_pedido")
+        text = cliente
+        if pedido:
+            text += f"<br/><font size='6' color='#6B7280'>{pedido}</font>"
+        return Paragraph(text, _cell)
+
     headers = ["Data", "Obra/Cliente", "Serviço", "Qtd/Unid.", "Valor Unit.", "Total"]
     rows = [headers] + [
         [
             str(a["data_execucao"]),
-            a.get("obra_cliente", ""),
+            _obra_cell(a),
             a.get("servico_descricao", ""),
             _fmt_quantidade(a["quantidade"], a.get("servico_unidade", "")),
             _fmt_moeda(Decimal(str(a.get("valor_unitario", 0)))),
