@@ -51,6 +51,15 @@ def atualizar(
     return ObraService(db).atualizar(id, data, current_user.id)
 
 
+@router.delete("/{id}", status_code=204)
+def deletar(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_papel("admin")),
+) -> None:
+    ObraService(db).deletar(id, current_user.id)
+
+
 @router.get("/{id}/relatorio-pdf")
 def relatorio_pdf(
     id: int,

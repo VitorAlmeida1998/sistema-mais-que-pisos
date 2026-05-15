@@ -46,3 +46,12 @@ def atualizar(
     current_user: Usuario = Depends(require_papel("admin", "gestor")),
 ) -> InstaladorResponse:
     return InstaladorService(db).atualizar(id, data, current_user.id)
+
+
+@router.delete("/{id}", status_code=204)
+def deletar(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_papel("admin")),
+) -> None:
+    InstaladorService(db).deletar(id, current_user.id)

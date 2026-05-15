@@ -33,3 +33,18 @@ class ObraService:
         set_audit_user(usuario_id)
         updated = self.repo.update(item, data.model_dump(exclude_none=True))
         return ObraResponse.model_validate(updated)
+
+    def deletar(self, id: int, usuario_id: int) -> None:
+        from sqlalchemy import select, func
+        from app.models.atividade import Atividade
+        item = self.repo.get_by_id(id)
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Obra não encontrada")
+        tem_atividades = self.repo.db.execute(select(func.count()).where(Atividade.obra_id == id).select_from(Atividade)).scalar() or 0
+        if tem_atividades:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Não é possível excluir: obra possui atividades vinculadas.",
+            )
+        set_audit_user(usuario_id)
+        self.repo.delete(item)

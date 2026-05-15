@@ -38,3 +38,21 @@ class InstaladorService:
 
     def desativar(self, id: int, usuario_id: int) -> InstaladorResponse:
         return self.atualizar(id, InstaladorUpdate(ativo=False), usuario_id)
+
+    def deletar(self, id: int, usuario_id: int) -> None:
+        from sqlalchemy import select, func
+        from app.models.atividade import Atividade
+        from app.models.adiantamento import Adiantamento
+        item = self.repo.get_by_id(id)
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instalador não encontrado")
+        db = self.repo.db
+        tem_atividades = db.execute(select(func.count()).where(Atividade.instalador_id == id).select_from(Atividade)).scalar() or 0
+        tem_adiantamentos = db.execute(select(func.count()).where(Adiantamento.instalador_id == id).select_from(Adiantamento)).scalar() or 0
+        if tem_atividades or tem_adiantamentos:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Não é possível excluir: instalador possui atividades ou adiantamentos vinculados.",
+            )
+        set_audit_user(usuario_id)
+        self.repo.delete(item)
