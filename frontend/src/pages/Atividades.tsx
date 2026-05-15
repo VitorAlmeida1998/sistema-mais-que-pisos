@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, CheckCircle, Trash2, Pencil, ClipboardList, Download } from 'lucide-react'
+import { Plus, CheckCircle, Trash2, Pencil, ClipboardList, Download, ChevronDown } from 'lucide-react'
 import { exportToExcel } from '@/lib/excel'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -509,10 +509,23 @@ export default function Atividades() {
     setAbaAtiva(instaladores[0].id)
   }
 
+  const [dropdownAberto, setDropdownAberto] = useState(false)
+  const [searchInst, setSearchInst] = useState('')
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    if (abaAtiva === null) return
-    document.getElementById(`tab-inst-${abaAtiva}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
-  }, [abaAtiva])
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownAberto(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const instaladoresFiltrados = instaladores.filter((i) =>
+    i.nome.toLowerCase().includes(searchInst.toLowerCase())
+  )
 
   return (
     <div>
@@ -566,41 +579,77 @@ export default function Atividades() {
         </div>
       </div>
 
-      {/* Abas de instaladores */}
-      {loadingInstaladores ? (
-        <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse mb-4" />
-      ) : (
-        <div className="flex gap-1 overflow-x-auto pb-1 mb-4 scrollbar-none">
-          {instaladores.map((inst) => {
-            const pendentes = pendentePorInstalador[inst.id] ?? 0
-            const ativo = inst.id === abaAtiva
-            return (
-              <button
-                id={`tab-inst-${inst.id}`}
-                key={inst.id}
-                onClick={() => setAbaAtiva(inst.id)}
-                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${
-                  ativo
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
-                }`}
-              >
-                {inst.nome}
-                {!inst.ativo && (
-                  <span className="text-[10px] opacity-60">(inativo)</span>
-                )}
-                {pendentes > 0 && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
-                    ativo ? 'bg-white/30 text-white' : 'bg-amber-400 text-gray-900'
-                  }`}>
-                    {pendentes}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      )}
+      {/* Dropdown de instaladores */}
+      <div ref={dropdownRef} className="relative mb-4 w-full sm:w-72">
+        {loadingInstaladores ? (
+          <div className="h-10 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse" />
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setDropdownAberto((v) => !v); setSearchInst('') }}
+            className="w-full flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium shadow-sm hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+          >
+            <span className="flex-1 text-left text-gray-700 dark:text-gray-300 truncate">
+              {instaladorAtivo?.nome ?? 'Selecione um instalador'}
+            </span>
+            {instaladorAtivo && !instaladorAtivo.ativo && (
+              <span className="text-[10px] text-gray-400 flex-shrink-0">(inativo)</span>
+            )}
+            {instaladorAtivo && (pendentePorInstalador[instaladorAtivo.id] ?? 0) > 0 && (
+              <span className="bg-amber-400 text-gray-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none flex-shrink-0">
+                {pendentePorInstalador[instaladorAtivo.id]}
+              </span>
+            )}
+            <ChevronDown size={14} className={`text-gray-400 flex-shrink-0 transition-transform ${dropdownAberto ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+
+        {dropdownAberto && (
+          <div className="absolute z-30 top-full mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl shadow-lg">
+            <div className="p-2 border-b dark:border-gray-700">
+              <input
+                type="text"
+                autoFocus
+                placeholder="Buscar instalador..."
+                value={searchInst}
+                onChange={(e) => setSearchInst(e.target.value)}
+                className="input text-sm w-full"
+              />
+            </div>
+            <ul className="max-h-60 overflow-y-auto py-1">
+              {instaladoresFiltrados.length === 0 ? (
+                <li className="px-4 py-3 text-sm text-gray-400">Nenhum instalador encontrado</li>
+              ) : (
+                instaladoresFiltrados.map((inst) => {
+                  const pendentes = pendentePorInstalador[inst.id] ?? 0
+                  const selecionado = inst.id === abaAtiva
+                  return (
+                    <li key={inst.id}>
+                      <button
+                        type="button"
+                        onClick={() => { setAbaAtiva(inst.id); setDropdownAberto(false); setSearchInst('') }}
+                        className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm text-left transition-colors ${
+                          selecionado
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <span className="flex-1 truncate">{inst.nome}</span>
+                        {!inst.ativo && <span className="text-[10px] text-gray-400 flex-shrink-0">(inativo)</span>}
+                        {pendentes > 0 && (
+                          <span className="bg-amber-400 text-gray-900 text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none flex-shrink-0">
+                            {pendentes}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })
+              )}
+            </ul>
+          </div>
+        )}
+      </div>
 
       {/* Conteúdo da aba ativa */}
       {instaladorAtivo && (
