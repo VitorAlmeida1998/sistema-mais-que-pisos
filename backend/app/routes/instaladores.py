@@ -48,10 +48,20 @@ def atualizar(
     return InstaladorService(db).atualizar(id, data, current_user.id)
 
 
-@router.delete("/{id}", status_code=204)
-def deletar(
+@router.get("/{id}/dependencias")
+def dependencias(
     id: int,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_papel("admin")),
+) -> dict:
+    return InstaladorService(db).dependencias(id)
+
+
+@router.delete("/{id}", status_code=204)
+def deletar(
+    id: int,
+    cascade: bool = False,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_papel("admin")),
 ) -> None:
-    InstaladorService(db).deletar(id, current_user.id)
+    InstaladorService(db).deletar(id, current_user.id, cascade=cascade)

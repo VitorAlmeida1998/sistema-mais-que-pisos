@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Pencil, Trash2, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users, AlertTriangle } from 'lucide-react'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useForm, Controller } from 'react-hook-form'
@@ -11,7 +11,6 @@ import { toast } from 'sonner'
 import { instaladoresApi } from '@/services/api'
 import { formatCPF, getApiError, isValidCPF } from '@/lib/utils'
 import { maskCPF, maskTelefone } from '@/lib/masks'
-import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
 import { usePagination } from '@/hooks/usePagination'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
@@ -166,13 +165,79 @@ function InstaladorModal({
   )
 }
 
+function DeleteInstaladorModal({ instalador, onClose, onDeleted }: {
+  instalador: Instalador
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const { data: deps, isLoading } = useQuery({
+    queryKey: ['instalador-deps', instalador.id],
+    queryFn: () => instaladoresApi.dependencias(instalador.id).then((r) => r.data),
+  })
+
+  const mutation = useMutation({
+    mutationFn: () => instaladoresApi.delete(instalador.id, true),
+    onSuccess: () => { toast.success('Instalador e todos os registros vinculados foram excluídos'); onDeleted() },
+    onError: (err) => toast.error(getApiError(err)),
+  })
+
+  const temDeps = deps && (deps.atividades > 0 || deps.adiantamentos > 0 || deps.pagamentos > 0)
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md">
+        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center gap-3">
+          <AlertTriangle size={20} className="text-red-500 flex-shrink-0" />
+          <h2 className="text-lg font-semibold">Excluir instalador</h2>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Tem certeza que deseja excluir <span className="font-semibold">{instalador.nome}</span>?
+          </p>
+
+          {isLoading ? (
+            <div className="h-20 bg-gray-100 dark:bg-gray-700 rounded-xl animate-pulse" />
+          ) : temDeps ? (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 space-y-2">
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">Registros vinculados que serão excluídos:</p>
+              <ul className="text-sm text-red-600 dark:text-red-300 space-y-1 list-disc list-inside">
+                {deps!.atividades > 0 && <li>{deps!.atividades} atividade(s)</li>}
+                {deps!.adiantamentos > 0 && <li>{deps!.adiantamentos} adiantamento(s)</li>}
+                {deps!.pagamentos > 0 && <li>{deps!.pagamentos} pagamento(s) / fechamento(s)</li>}
+              </ul>
+              <p className="text-xs text-red-500 dark:text-red-400 mt-2 font-medium">
+                Esta ação é irreversível.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3">
+              <p className="text-sm text-amber-700 dark:text-amber-400">Nenhum registro vinculado. A exclusão é segura.</p>
+            </div>
+          )}
+        </div>
+        <div className="px-6 py-4 border-t dark:border-gray-700 flex justify-end gap-3">
+          <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+          <button
+            type="button"
+            onClick={() => mutation.mutate()}
+            disabled={isLoading || mutation.isPending}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
+          >
+            {mutation.isPending ? 'Excluindo...' : temDeps ? 'Excluir tudo' : 'Excluir'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Instaladores() {
   const navigate = useNavigate()
   const { canWrite, isAdmin } = useAuth()
-  const { confirm, dialog } = useConfirm()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Instalador | undefined>()
+  const [deleting, setDeleting] = useState<Instalador | undefined>()
   const [apenasAtivos, setApenasAtivos] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -181,20 +246,10 @@ export default function Instaladores() {
     queryFn: () => instaladoresApi.list({ apenas_ativos: apenasAtivos }).then((r) => r.data),
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => instaladoresApi.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['instaladores'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toast.success('Instalador desativado')
-    },
-    onError: (err) => toast.error(getApiError(err)),
-  })
-
-  async function handleDelete(inst: Instalador) {
-    const ok = await confirm(`Desativar "${inst.nome}"?`, 'O instalador ficará inativo e não aparecerá nos filtros ativos.')
-    if (!ok) return
-    deleteMutation.mutate(inst.id)
+  function handleDeleted() {
+    queryClient.invalidateQueries({ queryKey: ['instaladores'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    setDeleting(undefined)
   }
 
   const filtered = data.filter((i) => i.nome.toLowerCase().includes(search.toLowerCase()))
@@ -283,8 +338,7 @@ export default function Instaladores() {
                         </button>
                         {isAdmin && (
                           <button
-                            onClick={() => handleDelete(inst)}
-                            disabled={deleteMutation.isPending}
+                            onClick={() => setDeleting(inst)}
                             className="p-1 text-gray-400 hover:text-red-600 rounded"
                           >
                             <Trash2 size={15} />
@@ -308,7 +362,13 @@ export default function Instaladores() {
           onClose={() => { setShowModal(false); setEditing(undefined) }}
         />
       )}
-      {dialog}
+      {deleting && (
+        <DeleteInstaladorModal
+          instalador={deleting}
+          onClose={() => setDeleting(undefined)}
+          onDeleted={handleDeleted}
+        />
+      )}
     </div>
   )
 }

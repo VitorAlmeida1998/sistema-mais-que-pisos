@@ -26,7 +26,10 @@ export const instaladoresApi = {
   get: (id: number) => api.get<Instalador>(`/instaladores/${id}`),
   create: (data: unknown) => api.post<Instalador>('/instaladores', data),
   update: (id: number, data: unknown) => api.put<Instalador>(`/instaladores/${id}`, data),
-  delete: (id: number) => api.delete(`/instaladores/${id}`),
+  dependencias: (id: number) =>
+    api.get<{ atividades: number; adiantamentos: number; pagamentos: number }>(`/instaladores/${id}/dependencias`),
+  delete: (id: number, cascade = false) =>
+    api.delete(`/instaladores/${id}`, { params: { cascade } }),
 }
 
 // Obras

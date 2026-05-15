@@ -39,20 +39,36 @@ class InstaladorService:
     def desativar(self, id: int, usuario_id: int) -> InstaladorResponse:
         return self.atualizar(id, InstaladorUpdate(ativo=False), usuario_id)
 
-    def deletar(self, id: int, usuario_id: int) -> None:
+    def dependencias(self, id: int) -> dict:
         from sqlalchemy import select, func
         from app.models.atividade import Atividade
         from app.models.adiantamento import Adiantamento
+        from app.models.pagamento import Pagamento
+        if not self.repo.get_by_id(id):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instalador não encontrado")
+        db = self.repo.db
+        return {
+            "atividades": db.execute(select(func.count()).where(Atividade.instalador_id == id).select_from(Atividade)).scalar() or 0,
+            "adiantamentos": db.execute(select(func.count()).where(Adiantamento.instalador_id == id).select_from(Adiantamento)).scalar() or 0,
+            "pagamentos": db.execute(select(func.count()).where(Pagamento.instalador_id == id).select_from(Pagamento)).scalar() or 0,
+        }
+
+    def deletar(self, id: int, usuario_id: int, cascade: bool = False) -> None:
+        from sqlalchemy import select, delete as sql_delete
+        from app.models.atividade import Atividade
+        from app.models.adiantamento import Adiantamento
+        from app.models.pagamento import Pagamento
         item = self.repo.get_by_id(id)
         if not item:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instalador não encontrado")
         db = self.repo.db
-        tem_atividades = db.execute(select(func.count()).where(Atividade.instalador_id == id).select_from(Atividade)).scalar() or 0
-        tem_adiantamentos = db.execute(select(func.count()).where(Adiantamento.instalador_id == id).select_from(Adiantamento)).scalar() or 0
-        if tem_atividades or tem_adiantamentos:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Não é possível excluir: instalador possui atividades ou adiantamentos vinculados.",
-            )
+        if not cascade:
+            deps = self.dependencias(id)
+            if any(deps.values()):
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Instalador possui registros vinculados.")
+        else:
+            db.execute(sql_delete(Atividade).where(Atividade.instalador_id == id))
+            db.execute(sql_delete(Adiantamento).where(Adiantamento.instalador_id == id))
+            db.execute(sql_delete(Pagamento).where(Pagamento.instalador_id == id))
         set_audit_user(usuario_id)
         self.repo.delete(item)
