@@ -37,6 +37,7 @@ export const obrasApi = {
   create: (data: unknown) => api.post<Obra>('/obras', data),
   update: (id: number, data: unknown) => api.put<Obra>(`/obras/${id}`, data),
   delete: (id: number) => api.delete(`/obras/${id}`),
+  relatorioObra: (id: number) => api.get(`/obras/${id}/relatorio-pdf`, { responseType: 'blob' }),
 }
 
 // Serviços

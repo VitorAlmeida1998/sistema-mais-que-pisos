@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import tempfile
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -191,6 +193,134 @@ def _rodape(pagamento_id: int, s: dict) -> list:
             s["footer"],
         ),
     ]
+
+
+_STATUS_ATIVIDADE_LABELS = {"pendente": "Pendente", "aprovada": "Aprovada", "paga": "Paga"}
+_STATUS_OBRA_LABELS = {"em_andamento": "Em Andamento", "concluida": "Concluída", "cancelada": "Cancelada"}
+AZUL = colors.HexColor("#3B82F6")
+AMARELO = colors.HexColor("#F59E0B")
+
+
+def _cabecalho_obra(obra: dict, s: dict) -> list:
+    status_label = _STATUS_OBRA_LABELS.get(str(obra.get("status", "")), str(obra.get("status", "")))
+    pedido = f" — Pedido {obra['numero_pedido']}" if obra.get("numero_pedido") else ""
+    return [
+        Paragraph("MAIS QUE PISOS", s["title"]),
+        Paragraph("Instalação e Acabamento de Pisos", s["subtitle"]),
+        HRFlowable(width="100%", thickness=2, color=VERMELHO, spaceAfter=8),
+        Paragraph("RELATÓRIO DE OBRA", s["rec_title"]),
+        Paragraph(f"{obra['cliente_nome']}{pedido} — {status_label}", s["subtitle"]),
+        Spacer(1, 0.3 * cm),
+    ]
+
+
+def _secao_info_obra(obra: dict, s: dict) -> list:
+    data_fim = obra.get("data_fim_prevista")
+    rows = [
+        ["Cliente:", obra["cliente_nome"]],
+        ["Endereço:", obra["endereco"]],
+        ["Início:", str(obra["data_inicio"])],
+        ["Previsão de Término:", str(data_fim) if data_fim else "—"],
+    ]
+    if obra.get("observacoes"):
+        rows.append(["Observações:", obra["observacoes"]])
+
+    table = Table(rows, colWidths=[4 * cm, None])
+    table.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("TEXTCOLOR", (0, 0), (0, -1), VERMELHO),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]))
+    return [Paragraph("DADOS DA OBRA", s["section"]), table, Spacer(1, 0.3 * cm)]
+
+
+def _secao_atividades_obra(atividades: list, s: dict) -> list:
+    if not atividades:
+        return [
+            Paragraph("ATIVIDADES", s["section"]),
+            Paragraph("Nenhuma atividade registrada para esta obra.", s["subtitle"]),
+            Spacer(1, 0.3 * cm),
+        ]
+    headers = ["Data", "Instalador", "Serviço", "Qtd/Unid.", "Valor", "Status"]
+    rows = [headers] + [
+        [
+            str(a.get("data_execucao", "")),
+            a.get("instalador_nome") or "—",
+            a.get("servico_descricao") or "—",
+            _fmt_quantidade(str(a["quantidade"]), str(a.get("servico_unidade") or "")),
+            _fmt_moeda(Decimal(str(a["valor_calculado"]))),
+            _STATUS_ATIVIDADE_LABELS.get(str(a.get("status", "")), str(a.get("status", ""))),
+        ]
+        for a in atividades
+    ]
+    col_widths = [1.8 * cm, 3.5 * cm, 4.5 * cm, 2.2 * cm, 2.5 * cm, 2.5 * cm]
+    table = Table(rows, colWidths=col_widths, repeatRows=1)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), VERMELHO),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, _ZEBRA]),
+        ("GRID", (0, 0), (-1, -1), 0.5, _GRID),
+        ("ALIGN", (3, 0), (4, -1), "RIGHT"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 4),
+    ]))
+    return [Paragraph("ATIVIDADES", s["section"]), table, Spacer(1, 0.3 * cm)]
+
+
+def _secao_totais_obra(atividades: list, s: dict) -> list:
+    pendentes = [a for a in atividades if str(a.get("status")) == "pendente"]
+    aprovadas = [a for a in atividades if str(a.get("status")) == "aprovada"]
+    pagas = [a for a in atividades if str(a.get("status")) == "paga"]
+
+    def soma(lst: list) -> Decimal:
+        return sum(Decimal(str(a["valor_calculado"])) for a in lst)
+
+    total_geral = soma(atividades)
+    rows = [
+        ["Total de Atividades:", str(len(atividades))],
+        ["  Pendentes:", f"{len(pendentes)} — {_fmt_moeda(soma(pendentes))}"],
+        ["  Aprovadas:", f"{len(aprovadas)} — {_fmt_moeda(soma(aprovadas))}"],
+        ["  Pagas:", f"{len(pagas)} — {_fmt_moeda(soma(pagas))}"],
+        ["VALOR TOTAL:", _fmt_moeda(total_geral)],
+    ]
+    table = Table(rows, colWidths=[None, 5 * cm], hAlign="RIGHT")
+    table.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+        ("FONTNAME", (0, 4), (-1, 4), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 4), (-1, 4), 11),
+        ("TEXTCOLOR", (0, 4), (-1, 4), VERDE),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]))
+    return [HRFlowable(width="100%", thickness=1, color=VERMELHO, spaceAfter=4), table, Spacer(1, 0.5 * cm)]
+
+
+def gerar_relatorio_obra_pdf(obra: dict, atividades: list[dict]) -> str:
+    fd, path = tempfile.mkstemp(suffix=".pdf", prefix="relatorio_obra_")
+    os.close(fd)
+
+    s = _estilos()
+    story = (
+        _cabecalho_obra(obra, s)
+        + _secao_info_obra(obra, s)
+        + _secao_atividades_obra(atividades, s)
+        + _secao_totais_obra(atividades, s)
+    )
+    story.append(Paragraph(
+        f"Documento gerado em {date.today().strftime('%d/%m/%Y')} | Obra #{obra['id']}",
+        _estilos()["footer"],
+    ))
+
+    doc = SimpleDocTemplate(
+        path, pagesize=A4,
+        rightMargin=2 * cm, leftMargin=2 * cm,
+        topMargin=2 * cm, bottomMargin=2 * cm,
+    )
+    doc.build(story)
+    return path
 
 
 def gerar_recibo_pdf(pagamento_data: dict) -> str:
