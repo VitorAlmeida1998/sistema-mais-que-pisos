@@ -299,7 +299,6 @@ function TabelaAtividades({
   filterStatus,
   dataInicio,
   dataFim,
-  search,
   canWrite,
   isAdmin,
 }: {
@@ -307,7 +306,6 @@ function TabelaAtividades({
   filterStatus: string
   dataInicio: string
   dataFim: string
-  search: string
   canWrite: boolean
   isAdmin: boolean
 }) {
@@ -326,17 +324,6 @@ function TabelaAtividades({
         ...(dataFim ? { data_fim: dataFim } : {}),
       }).then((r) => r.data),
   })
-
-  const filtered = search
-    ? data.filter((a) => {
-        const q = search.toLowerCase()
-        return (
-          (a.obra_cliente ?? '').toLowerCase().includes(q) ||
-          (a.obra_numero_pedido ?? '').toLowerCase().includes(q) ||
-          (a.servico_descricao ?? '').toLowerCase().includes(q)
-        )
-      })
-    : data
 
   const aprovarMutation = useMutation({
     mutationFn: (id: number) => atividadesApi.aprovar(id),
@@ -364,8 +351,8 @@ function TabelaAtividades({
     deleteMutation.mutate(id)
   }
 
-  const { page, setPage, paginated, total } = usePagination(filtered, pageSize)
-  const totalValor = filtered.reduce((s, a) => s + parseFloat(a.valor_calculado), 0)
+  const { page, setPage, paginated, total } = usePagination(data, pageSize)
+  const totalValor = data.reduce((s, a) => s + parseFloat(a.valor_calculado), 0)
 
   return (
     <>
@@ -373,16 +360,16 @@ function TabelaAtividades({
       <div className="flex flex-wrap items-center justify-between gap-3 px-1 mb-3">
         <div className="flex gap-4 text-sm text-gray-500">
           <span>{total} atividade(s)</span>
-          {filtered.length > 0 && (
+          {data.length > 0 && (
             <span className="font-semibold text-gray-700 dark:text-gray-300">
               Total: {formatCurrency(totalValor)}
             </span>
           )}
         </div>
-        {filtered.length > 0 && (
+        {data.length > 0 && (
           <button
             onClick={() => exportToExcel(
-              filtered.map((a) => ({
+              data.map((a) => ({
                 Data: a.data_execucao,
                 Obra: a.obra_cliente ?? '',
                 'Nº Pedido': a.obra_numero_pedido ?? '',
@@ -422,7 +409,7 @@ function TabelaAtividades({
                 <EmptyState
                   icon={ClipboardList}
                   title="Nenhuma atividade encontrada"
-                  description={search || filterStatus || dataInicio || dataFim ? 'Tente ajustar ou limpar os filtros.' : 'Registre a primeira atividade deste instalador.'}
+                  description={filterStatus || dataInicio || dataFim ? 'Tente ajustar ou limpar os filtros.' : 'Registre a primeira atividade deste instalador.'}
                 />
               ) : (
                 paginated.map((a) => (
@@ -500,7 +487,6 @@ export default function Atividades() {
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
-  const [search, setSearch] = useState('')
 
   const { data: instaladores = [], isLoading: loadingInstaladores } = useQuery({
     queryKey: ['instaladores', false],
@@ -541,13 +527,6 @@ export default function Atividades() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            placeholder="Buscar obra ou serviço..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input w-full sm:w-48 text-sm"
-          />
           <div className="flex flex-col gap-1 flex-1 sm:flex-none">
             <div className="flex items-center gap-1.5">
               <input
@@ -576,9 +555,9 @@ export default function Atividades() {
             <option value="aprovada">Aprovada</option>
             <option value="paga">Paga</option>
           </select>
-          {(search || dataInicio || dataFim || filterStatus) && (
+          {(dataInicio || dataFim || filterStatus) && (
             <button
-              onClick={() => { setSearch(''); setDataInicio(''); setDataFim(''); setFilterStatus('') }}
+              onClick={() => { setDataInicio(''); setDataFim(''); setFilterStatus('') }}
               className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline"
             >
               Limpar filtros
@@ -631,7 +610,6 @@ export default function Atividades() {
           filterStatus={filterStatus}
           dataInicio={dataInicio}
           dataFim={dataFim}
-          search={search}
           canWrite={canWrite}
           isAdmin={isAdmin}
         />
