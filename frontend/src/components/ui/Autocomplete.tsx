@@ -34,7 +34,7 @@ export function Autocomplete<T extends { id: number }>({
   const selected = items.find((i) => i.id === value)
 
   useEffect(() => {
-    if (selected) setQuery(getLabel(selected))
+    setQuery(selected ? getLabel(selected) : '')
   }, [selected]) // getLabel is stable in practice
 
   useEffect(() => {

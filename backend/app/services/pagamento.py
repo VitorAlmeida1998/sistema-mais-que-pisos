@@ -96,18 +96,6 @@ class PagamentoService:
         self.db.commit()
         self.db.refresh(pagamento)
 
-        # Gerar PDF
-        try:
-            from app.services.pdf_generator import gerar_recibo_pdf
-            pdf_data = self._build_pdf_data(pagamento, instalador, atividades, adiantamentos)
-            pdf_path = gerar_recibo_pdf(pdf_data)
-            pagamento.comprovante_pdf_path = pdf_path
-            self.db.commit()
-            self.db.refresh(pagamento)
-        except Exception as exc:
-            # PDF é opcional — falha não bloqueia o pagamento
-            logger.warning("falha_ao_gerar_pdf", pagamento_id=pagamento.id, erro=str(exc))
-
         r = PagamentoResponse.model_validate(pagamento)
         r.instalador_nome = instalador.nome
         return r

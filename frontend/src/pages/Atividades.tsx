@@ -505,9 +505,11 @@ export default function Atividades() {
 
   const instaladorAtivo = instaladores.find((i) => i.id === abaAtiva) ?? instaladores[0] ?? null
 
-  if (!loadingInstaladores && instaladores.length > 0 && abaAtiva === null) {
-    setAbaAtiva(instaladores[0].id)
-  }
+  useEffect(() => {
+    if (!loadingInstaladores && instaladores.length > 0 && abaAtiva === null) {
+      setAbaAtiva(instaladores[0].id)
+    }
+  }, [loadingInstaladores, instaladores, abaAtiva])
 
   const [dropdownAberto, setDropdownAberto] = useState(false)
   const [searchInst, setSearchInst] = useState('')

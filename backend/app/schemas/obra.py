@@ -15,6 +15,9 @@ class ObraCreate(BaseModel):
     @field_validator("data_fim_prevista")
     @classmethod
     def data_fim_apos_inicio(cls, v: date | None, info: object) -> date | None:
+        from pydantic import ValidationInfo
+        if isinstance(info, ValidationInfo) and v and info.data.get("data_inicio") and v < info.data["data_inicio"]:
+            raise ValueError("data_fim_prevista deve ser igual ou posterior a data_inicio")
         return v
 
 
