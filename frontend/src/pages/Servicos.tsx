@@ -97,13 +97,15 @@ export default function Servicos() {
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState(false)
   const [editing, setEditing] = useState<Servico | undefined>()
+  const [search, setSearch] = useState('')
 
   const { data = [], isLoading } = useQuery({
     queryKey: ['servicos'],
     queryFn: () => servicosApi.list({ apenas_ativos: false }).then((r) => r.data),
   })
+  const filtered = data.filter((s) => s.descricao.toLowerCase().includes(search.toLowerCase()))
   const pageSize = useResponsivePageSize()
-  const { page, setPage, paginated, total } = usePagination(data, pageSize)
+  const { page, setPage, paginated, total } = usePagination(filtered, pageSize)
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => servicosApi.delete(id),
@@ -129,9 +131,18 @@ export default function Servicos() {
           <h1 className="text-2xl font-bold">Serviços</h1>
           <p className="text-sm text-gray-500">{total} registro(s)</p>
         </div>
-        <button onClick={() => { setEditing(undefined); setShowModal(true) }} className="btn-primary flex items-center gap-2">
-          <Plus size={16} /> Novo Serviço
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            placeholder="Buscar por descrição..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input w-48 text-sm"
+          />
+          <button onClick={() => { setEditing(undefined); setShowModal(true) }} className="btn-primary flex items-center gap-2">
+            <Plus size={16} /> Novo Serviço
+          </button>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -149,8 +160,8 @@ export default function Servicos() {
           <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {isLoading ? (
               <TableSkeleton cols={5} />
-            ) : data.length === 0 ? (
-              <EmptyState icon={Wrench} title="Nenhum serviço cadastrado" description="Adicione os tipos de serviço para usar nas atividades." />
+            ) : filtered.length === 0 ? (
+              <EmptyState icon={Wrench} title="Nenhum serviço encontrado" description={search ? 'Tente outro termo de busca.' : 'Adicione os tipos de serviço para usar nas atividades.'} />
             ) : (
               paginated.map((s) => (
                 <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
