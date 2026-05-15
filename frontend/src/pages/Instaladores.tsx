@@ -99,7 +99,6 @@ function InstaladorModal({
                 <input
                   className="input"
                   placeholder="000.000.000-00"
-                  disabled={!!instalador}
                   value={maskCPF(field.value || '')}
                   onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 11))}
                   onBlur={field.onBlur}
