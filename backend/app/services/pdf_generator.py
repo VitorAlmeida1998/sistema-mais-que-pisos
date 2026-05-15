@@ -242,30 +242,43 @@ def _secao_atividades_obra(atividades: list, s: dict) -> list:
             Paragraph("Nenhuma atividade registrada para esta obra.", s["subtitle"]),
             Spacer(1, 0.3 * cm),
         ]
-    headers = ["Data", "Instalador", "Serviço", "Qtd/Unid.", "Valor", "Status"]
+
+    # Paragraph cells wrap automatically; plain strings overflow
+    _cell = ParagraphStyle("cell", fontSize=8, leading=10)
+    _header = ParagraphStyle("header", fontSize=8, leading=10, textColor=colors.white, fontName="Helvetica-Bold")
+
+    headers = [
+        Paragraph("Data", _header),
+        Paragraph("Instalador", _header),
+        Paragraph("Serviço", _header),
+        Paragraph("Qtd/Unid.", _header),
+        Paragraph("Valor", _header),
+        Paragraph("Status", _header),
+    ]
     rows = [headers] + [
         [
-            str(a.get("data_execucao", "")),
-            a.get("instalador_nome") or "—",
-            a.get("servico_descricao") or "—",
-            _fmt_quantidade(str(a["quantidade"]), str(a.get("servico_unidade") or "")),
-            _fmt_moeda(Decimal(str(a["valor_calculado"]))),
-            _STATUS_ATIVIDADE_LABELS.get(str(a.get("status", "")), str(a.get("status", ""))),
+            Paragraph(str(a.get("data_execucao", "")), _cell),
+            Paragraph(a.get("instalador_nome") or "—", _cell),
+            Paragraph(a.get("servico_descricao") or "—", _cell),
+            Paragraph(_fmt_quantidade(str(a["quantidade"]), str(a.get("servico_unidade") or "")), _cell),
+            Paragraph(_fmt_moeda(Decimal(str(a["valor_calculado"]))), _cell),
+            Paragraph(_STATUS_ATIVIDADE_LABELS.get(str(a.get("status", "")), str(a.get("status", ""))), _cell),
         ]
         for a in atividades
     ]
-    col_widths = [1.8 * cm, 3.5 * cm, 4.5 * cm, 2.2 * cm, 2.5 * cm, 2.5 * cm]
+    # Total usable width on A4 with 2cm margins = 17cm
+    col_widths = [2.0 * cm, 3.5 * cm, 5.2 * cm, 2.1 * cm, 2.4 * cm, 1.8 * cm]
     table = Table(rows, colWidths=col_widths, repeatRows=1)
     table.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), VERMELHO),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-        ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, _ZEBRA]),
         ("GRID", (0, 0), (-1, -1), 0.5, _GRID),
         ("ALIGN", (3, 0), (4, -1), "RIGHT"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
     ]))
     return [Paragraph("ATIVIDADES", s["section"]), table, Spacer(1, 0.3 * cm)]
 
