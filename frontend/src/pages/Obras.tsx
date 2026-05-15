@@ -7,14 +7,15 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { obrasApi, atividadesApi } from '@/services/api'
+import { obrasApi, atividadesApi, instaladoresApi, servicosApi } from '@/services/api'
+import { Autocomplete } from '@/components/ui/Autocomplete'
 import { formatDate, formatCurrency, formatQuantidade, STATUS_OBRA_LABELS, STATUS_ATIVIDADE_LABELS, UNIDADE_LABELS, getApiError } from '@/lib/utils'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
 import { usePagination } from '@/hooks/usePagination'
 import { useResponsivePageSize } from '@/hooks/useResponsivePageSize'
 import { Pagination } from '@/components/ui/Pagination'
-import type { Obra, Atividade, StatusAtividade } from '@/types'
+import type { Obra, Atividade, StatusAtividade, Servico } from '@/types'
 
 const statusBadgeAtividade: Record<StatusAtividade, string> = {
   pendente: 'badge-pendente',
@@ -219,13 +220,59 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
       : { status: 'em_andamento' },
   })
 
+  // ── Sub-formulário de atividade (apenas na criação) ──────────────────────
+  const [showAtividade, setShowAtividade] = useState(false)
+  const [atv, setAtv] = useState({ instalador_id: 0, data_execucao: '', servico_id: 0, quantidade: '' })
+  const [servicoQuery, setServicoQuery] = useState('')
+  const [showNovoSvc, setShowNovoSvc] = useState(false)
+  const [novoSvc, setNovoSvc] = useState({ descricao: '', unidade: 'm2', valor_unitario: '' })
+
+  const { data: instaladores = [] } = useQuery({
+    queryKey: ['instaladores', true],
+    queryFn: () => instaladoresApi.list({ apenas_ativos: true }).then((r) => r.data),
+    enabled: showAtividade && !obra,
+  })
+  const { data: servicos = [] } = useQuery({
+    queryKey: ['servicos'],
+    queryFn: () => servicosApi.list({ apenas_ativos: true }).then((r) => r.data),
+    enabled: showAtividade && !obra,
+  })
+
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      obra ? obrasApi.update(obra.id, data) : obrasApi.create(data),
+    mutationFn: async (data: FormData) => {
+      const res = obra ? await obrasApi.update(obra.id, data) : await obrasApi.create(data)
+      const obraId = obra?.id ?? res.data.id
+
+      if (!obra && showAtividade) {
+        let servicoId = atv.servico_id
+
+        if (showNovoSvc && novoSvc.descricao && novoSvc.valor_unitario) {
+          const svcRes = await servicosApi.create({
+            descricao: novoSvc.descricao,
+            unidade: novoSvc.unidade,
+            valor_unitario: novoSvc.valor_unitario,
+          })
+          servicoId = (svcRes.data as Servico).id
+        }
+
+        if (atv.instalador_id > 0 && servicoId > 0 && atv.quantidade && atv.data_execucao) {
+          await atividadesApi.create({
+            instalador_id: atv.instalador_id,
+            obra_id: obraId,
+            servico_id: servicoId,
+            quantidade: parseFloat(atv.quantidade),
+            data_execucao: atv.data_execucao,
+          })
+        }
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['obras'] })
+      queryClient.invalidateQueries({ queryKey: ['atividades'] })
+      queryClient.invalidateQueries({ queryKey: ['servicos'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toast.success(obra ? 'Obra atualizada' : 'Obra cadastrada')
+      const msg = obra ? 'Obra atualizada' : showAtividade && atv.servico_id > 0 || (showNovoSvc && novoSvc.descricao) ? 'Obra e atividade criadas' : 'Obra cadastrada'
+      toast.success(msg)
       onClose()
     },
     onError: (err) => toast.error(getApiError(err)),
@@ -233,12 +280,13 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg">
-        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800 z-10">
           <h2 className="text-lg font-semibold">{obra ? 'Editar Obra' : 'Nova Obra'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xl">&times;</button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-6 space-y-4">
+          {/* Campos da obra */}
           <div>
             <label className="label">Nº do Pedido</label>
             <input {...register('numero_pedido')} className="input" placeholder="Ex: PED-2024-001" />
@@ -275,6 +323,151 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
             <label className="label">Observações</label>
             <textarea {...register('observacoes')} className="input h-20 resize-none" />
           </div>
+
+          {/* ── Atividade opcional (somente criação) ────────────────────── */}
+          {!obra && (
+            <div className="border-t dark:border-gray-700 pt-4">
+              {!showAtividade ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAtividade(true)}
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary-dark font-medium transition-colors"
+                >
+                  <Plus size={14} /> Adicionar atividade (opcional)
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <ClipboardList size={14} /> Atividade
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { setShowAtividade(false); setShowNovoSvc(false) }}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      Remover
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="label">Instalador</label>
+                    <select
+                      value={atv.instalador_id}
+                      onChange={(e) => setAtv((p) => ({ ...p, instalador_id: Number(e.target.value) }))}
+                      className="input"
+                    >
+                      <option value={0}>Selecione...</option>
+                      {instaladores.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="label">Data de Execução</label>
+                    <input
+                      type="date"
+                      value={atv.data_execucao}
+                      onChange={(e) => setAtv((p) => ({ ...p, data_execucao: e.target.value }))}
+                      className="input"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="label">Serviço</label>
+                    <Autocomplete
+                      items={servicos}
+                      value={atv.servico_id}
+                      onChange={(id) => { setAtv((p) => ({ ...p, servico_id: id })); if (id) setShowNovoSvc(false) }}
+                      placeholder="Digite para buscar serviço..."
+                      getLabel={(s) => s.descricao}
+                      filterFn={(s, q) => s.descricao.toLowerCase().includes(q.toLowerCase())}
+                      renderOption={(s) => (
+                        <div className="flex items-center justify-between px-4 py-2.5 text-sm">
+                          <span className="text-gray-800 dark:text-gray-200">{s.descricao}</span>
+                          <span className="text-xs text-gray-400 ml-3 flex-shrink-0">
+                            {formatCurrency(s.valor_unitario)}/{UNIDADE_LABELS[s.unidade]}
+                          </span>
+                        </div>
+                      )}
+                      renderInfo={(s) => `${formatCurrency(s.valor_unitario)} / ${UNIDADE_LABELS[s.unidade]}`}
+                      onQueryChange={setServicoQuery}
+                    />
+                    {!atv.servico_id && !showNovoSvc && (
+                      <button
+                        type="button"
+                        onClick={() => { setShowNovoSvc(true); setNovoSvc((p) => ({ ...p, descricao: servicoQuery })) }}
+                        className="mt-1.5 text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Plus size={12} />
+                        {servicoQuery ? `Criar serviço "${servicoQuery}"` : 'Criar novo serviço'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Sub-formulário de novo serviço */}
+                  {showNovoSvc && (
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Novo Serviço</span>
+                        <button type="button" onClick={() => setShowNovoSvc(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancelar</button>
+                      </div>
+                      <div>
+                        <label className="label">Descrição *</label>
+                        <input
+                          type="text"
+                          value={novoSvc.descricao}
+                          onChange={(e) => setNovoSvc((p) => ({ ...p, descricao: e.target.value }))}
+                          className="input"
+                          placeholder="Ex: Instalação de laminado"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="label">Unidade *</label>
+                          <select
+                            value={novoSvc.unidade}
+                            onChange={(e) => setNovoSvc((p) => ({ ...p, unidade: e.target.value }))}
+                            className="input"
+                          >
+                            <option value="m2">m²</option>
+                            <option value="metro_linear">Metro linear</option>
+                            <option value="unidade">Unidade</option>
+                            <option value="diaria">Diária</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="label">Valor unitário *</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={novoSvc.valor_unitario}
+                            onChange={(e) => setNovoSvc((p) => ({ ...p, valor_unitario: e.target.value }))}
+                            className="input"
+                            placeholder="0,00"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="label">Quantidade</label>
+                    <input
+                      type="number"
+                      step="0.001"
+                      min="0.001"
+                      value={atv.quantidade}
+                      onChange={(e) => setAtv((p) => ({ ...p, quantidade: e.target.value }))}
+                      className="input"
+                      placeholder="Ex: 25,5"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={mutation.isPending} className="btn-primary">

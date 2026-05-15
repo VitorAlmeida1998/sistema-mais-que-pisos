@@ -10,6 +10,7 @@ interface AutocompleteProps<T extends { id: number }> {
   renderOption: (item: T) => React.ReactNode
   filterFn: (item: T, query: string) => boolean
   renderInfo?: (item: T) => React.ReactNode
+  onQueryChange?: (query: string) => void
 }
 
 export function Autocomplete<T extends { id: number }>({
@@ -22,6 +23,7 @@ export function Autocomplete<T extends { id: number }>({
   renderOption,
   filterFn,
   renderInfo,
+  onQueryChange,
 }: AutocompleteProps<T>) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -80,6 +82,7 @@ export function Autocomplete<T extends { id: number }>({
         onChange={(e) => {
           setQuery(e.target.value)
           setOpen(true)
+          onQueryChange?.(e.target.value)
           if (!e.target.value) onChange(0)
         }}
         onFocus={handleFocus}
