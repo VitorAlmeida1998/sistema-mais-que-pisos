@@ -52,6 +52,21 @@ export const PAPEL_LABELS: Record<string, string> = {
   visualizador: 'Visualizador',
 }
 
+export function isValidCPF(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, '')
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i)
+  let rem = (sum * 10) % 11
+  if (rem >= 10) rem = 0
+  if (rem !== parseInt(digits[9])) return false
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i)
+  rem = (sum * 10) % 11
+  if (rem >= 10) rem = 0
+  return rem === parseInt(digits[10])
+}
+
 export function getApiError(error: unknown, fallback = 'Erro ao salvar'): string {
   return (
     (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback

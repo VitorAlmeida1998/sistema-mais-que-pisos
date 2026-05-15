@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { instaladoresApi } from '@/services/api'
-import { formatCPF, getApiError } from '@/lib/utils'
+import { formatCPF, getApiError, isValidCPF } from '@/lib/utils'
 import { maskCPF, maskTelefone } from '@/lib/masks'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useAuth } from '@/hooks/useAuth'
@@ -20,7 +20,7 @@ import type { Instalador } from '@/types'
 
 const schema = z.object({
   nome: z.string().min(2, 'Nome obrigatório'),
-  cpf: z.string().min(11, 'CPF inválido').max(14),
+  cpf: z.string().min(11, 'CPF inválido').max(14).refine(isValidCPF, 'CPF inválido'),
   telefone: z.string().optional(),
   chave_pix: z.string().optional(),
   banco: z.string().optional(),

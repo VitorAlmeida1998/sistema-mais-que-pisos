@@ -1,5 +1,5 @@
 from datetime import date
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.atividade import StatusAtividade
@@ -23,6 +23,8 @@ def listar(
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ) -> list[AtividadeResponse]:
+    if data_inicio and data_fim and data_inicio > data_fim:
+        raise HTTPException(status_code=422, detail="Data início deve ser anterior ou igual à data fim")
     return AtividadeService(db).listar(instalador_id, obra_id, status, data_inicio, data_fim, skip, limit)
 
 
