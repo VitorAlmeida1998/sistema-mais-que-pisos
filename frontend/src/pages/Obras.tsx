@@ -23,6 +23,12 @@ const statusBadgeAtividade: Record<StatusAtividade, string> = {
   paga: 'badge-paga',
 }
 
+const statusBadge: Record<string, string> = {
+  em_andamento: 'badge-aprovada',
+  concluida: 'badge-paga',
+  cancelada: 'badge-inativo',
+}
+
 function ObraDetalheModal({ obra, onClose }: { obra: Obra; onClose: () => void }) {
   const [downloading, setDownloading] = useState(false)
   const pageSize = useResponsivePageSize()
@@ -478,12 +484,6 @@ function ObraModal({ obra, onClose }: { obra?: Obra; onClose: () => void }) {
       </div>
     </div>
   )
-}
-
-const statusBadge: Record<string, string> = {
-  em_andamento: 'badge-aprovada',
-  concluida: 'badge-paga',
-  cancelada: 'badge-inativo',
 }
 
 export default function Obras() {

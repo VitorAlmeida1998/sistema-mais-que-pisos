@@ -148,6 +148,8 @@ class PagamentoService:
 
         pagamento = self.obter(id)
         instalador = self.inst_repo.get_by_id(pagamento.instalador_id)
+        if not instalador:
+            raise HTTPException(status_code=404, detail="Instalador não encontrado")
         atividades = list(
             self.db.execute(
                 select(Atividade)
