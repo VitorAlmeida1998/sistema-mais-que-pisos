@@ -13,8 +13,7 @@ class PagamentoPreviewRequest(BaseModel):
     @field_validator("semana_fim")
     @classmethod
     def fim_apos_inicio(cls, v: date, info: object) -> date:
-        from pydantic import ValidationInfo
-        if isinstance(info, ValidationInfo) and info.data.get("semana_inicio") and v < info.data["semana_inicio"]:
+        if hasattr(info, "data") and info.data.get("semana_inicio") and v < info.data["semana_inicio"]:  # type: ignore[union-attr]
             raise ValueError("semana_fim deve ser igual ou posterior a semana_inicio")
         return v
 
