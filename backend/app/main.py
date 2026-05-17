@@ -12,12 +12,12 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
-from app.database import ping_db
 from app.middleware.error_handler import (
     http_exception_handler,
     validation_exception_handler,
     generic_exception_handler,
 )
+from app.middleware.metrics import PrometheusMiddleware
 from app.utils.audit_listener import setup_audit_listeners
 
 structlog.configure(
@@ -51,6 +51,7 @@ app.add_exception_handler(StarletteHTTPException, http_exception_handler)  # typ
 app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
 app.add_exception_handler(Exception, generic_exception_handler)
 
+app.add_middleware(PrometheusMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -60,8 +61,10 @@ app.add_middleware(
 )
 
 from app.routes import auth, instaladores, obras, servicos, atividades, adiantamentos, pagamentos, relatorios, audit_log, usuarios, dashboard  # noqa: E402
+from app.routes.health import router as health_router  # noqa: E402
 
 PREFIX = "/api/v1"
+app.include_router(health_router)
 app.include_router(auth.router, prefix=PREFIX)
 app.include_router(instaladores.router, prefix=PREFIX)
 app.include_router(obras.router, prefix=PREFIX)
@@ -73,9 +76,3 @@ app.include_router(relatorios.router, prefix=PREFIX)
 app.include_router(audit_log.router, prefix=PREFIX)
 app.include_router(usuarios.router, prefix=PREFIX)
 app.include_router(dashboard.router, prefix=PREFIX)
-
-
-@app.get("/health")
-def health() -> dict:
-    db_ok = ping_db()
-    return {"status": "ok" if db_ok else "degraded", "database": db_ok}
